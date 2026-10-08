@@ -20,9 +20,9 @@ const db = new sqlite3.Database(dbPath, (err) => {
     }
 });
 
-// Initialize Tables and Default Baseline Data
+// Initialize Tables and Guaranteed Default Accounts
 db.serialize(() => {
-    db.run(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT, role TEXT)`);
+    db.run(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, role TEXT)`);
     db.run(`CREATE TABLE IF NOT EXISTS hremployees (id INTEGER PRIMARY KEY AUTOINCREMENT, fullname TEXT, department TEXT, position TEXT, phone TEXT, recorded_by TEXT, recorded_date TEXT)`);
     db.run(`CREATE TABLE IF NOT EXISTS storeitems (id INTEGER PRIMARY KEY AUTOINCREMENT, item_code TEXT, item_name TEXT, category TEXT, qty REAL, unit TEXT, unit_cost REAL, recorded_by TEXT, recorded_date TEXT)`);
     db.run(`CREATE TABLE IF NOT EXISTS storereleases (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, item_id INTEGER, item_code TEXT, item_name TEXT, qty_released REAL, recipient TEXT, project_site TEXT, recorded_by TEXT, recorded_date TEXT)`);
@@ -32,24 +32,23 @@ db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS fuel (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, equipment TEXT, operator TEXT, litres REAL, recorded_by TEXT, recorded_date TEXT)`);
     db.run(`CREATE TABLE IF NOT EXISTS machines (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, machine TEXT, hours REAL, status TEXT, recorded_by TEXT, recorded_date TEXT)`);
     db.run(`CREATE TABLE IF NOT EXISTS dumptrucks (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, truck TEXT, trips INTEGER, volume REAL, recorded_by TEXT, recorded_date TEXT)`);
-    db.run(`CREATE TABLE IF NOT EXISTS pettycash (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, description TEXT, amount REAL, recorded_by TEXT, recorded_date TEXT)`);
+    db.run(`CREATE TABLE IF NOT EXISTS pettycash (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, description TEXT, amount REAL, recorded_by TEXT, recorded_date TEXT)`, () => {
+        // Guaranteed seed so manager / 123 always works
+        const nowStr = new Date().toLocaleString();
+        const todayStr = new Date().toISOString().slice(0, 10);
 
-    // Seed default admin account if users table is empty
-    db.get(`SELECT COUNT(*) as count FROM users`, (err, row) => {
-        if (!err && row && row.count === 0) {
-            const nowStr = new Date().toLocaleString();
-            const todayStr = new Date().toISOString().slice(0, 10);
+        db.run(`INSERT OR IGNORE INTO users (username, password, role) VALUES ('manager', '123', 'manager')`);
+        db.run(`INSERT OR IGNORE INTO users (username, password, role) VALUES ('hrstaff', '123', 'hr')`);
+        db.run(`INSERT OR IGNORE INTO users (username, password, role) VALUES ('finance', '123', 'finance')`);
+        db.run(`INSERT OR IGNORE INTO users (username, password, role) VALUES ('operator', '123', 'operator')`);
+        db.run(`INSERT OR IGNORE INTO users (username, password, role) VALUES ('fleet', '123', 'fleet')`);
 
-            db.run(`INSERT INTO users (username, password, role) VALUES ('manager', '123', 'manager')`);
-            db.run(`INSERT INTO users (username, password, role) VALUES ('hrstaff', '123', 'hr')`);
-            db.run(`INSERT INTO users (username, password, role) VALUES ('finance', '123', 'finance')`);
-            db.run(`INSERT INTO users (username, password, role) VALUES ('operator', '123', 'operator')`);
-            db.run(`INSERT INTO users (username, password, role) VALUES ('fleet', '123', 'fleet')`);
-
-            db.run(`INSERT INTO storeitems (item_code, item_name, category, qty, unit, unit_cost, recorded_by, recorded_date) VALUES ('MTR-001', 'Portland Cement', 'Building Materials', 450, 'Bags', 1150, 'manager', '${nowStr}')`);
-            db.run(`INSERT INTO siteincome (date, category, client, amount, recorded_by, recorded_date) VALUES ('${todayStr}', 'Aggregate Sales', 'Awash Construction', 150000, 'manager', '${nowStr}')`);
-            console.log("Default baseline records seeded successfully.");
-        }
+        db.get(`SELECT COUNT(*) as count FROM storeitems`, (err, row) => {
+            if (!err && row && row.count === 0) {
+                db.run(`INSERT INTO storeitems (item_code, item_name, category, qty, unit, unit_cost, recorded_by, recorded_date) VALUES ('MTR-001', 'Portland Cement', 'Building Materials', 450, 'Bags', 1150, 'manager', '${nowStr}')`);
+                db.run(`INSERT INTO siteincome (date, category, client, amount, recorded_by, recorded_date) VALUES ('${todayStr}', 'Aggregate Sales', 'Awash Construction', 150000, 'manager', '${nowStr}')`);
+            }
+        });
     });
 });
 
