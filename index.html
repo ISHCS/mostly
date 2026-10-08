@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adis Alamyahu Construction - Site & Fleet Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load true SQLite WebAssembly library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-slate-100 font-sans min-h-screen flex flex-col text-slate-800">
@@ -20,15 +22,6 @@
             
             <form onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Select Role / Profile</label>
-                    <select id="loginRoleSelect" onchange="updateLoginHint(this.value)" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none cursor-pointer">
-                        <option value="manager">Site Manager (Admin / Full CRUD & Backups)</option>
-                        <option value="finance">Finance Manager (Income, Expenses & Ledger Entry)</option>
-                        <option value="fleet">Fleet Supervisor (View Only)</option>
-                        <option value="operator">Machine Operator (Can Log Machines & Dump Trucks)</option>
-                    </select>
-                </div>
-                <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Username</label>
                     <input type="text" id="loginUsername" required value="manager" placeholder="Enter your username" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                 </div>
@@ -37,7 +30,7 @@
                     <input type="password" id="loginPassword" required value="123" placeholder="Enter your password" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                 </div>
                 <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800" id="loginHintText">
-                    Role selected: Site Manager. Full editing & database backup privileges enabled.
+                    Enter your assigned user credentials. System role will be verified securely from the database.
                 </div>
                 <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-xl text-sm shadow-md transition">
                     Sign In to Portal
@@ -65,9 +58,9 @@
                 </div>
                 <!-- Admin Only Database Backup / Restore Tools -->
                 <div id="adminDbTools" class="flex items-center gap-2">
-                    <button onclick="exportDatabase()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 transition">Backup Data</button>
+                    <button onclick="exportDatabase()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 transition">Backup SQLite DB</button>
                     <label class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 cursor-pointer transition">
-                        Restore DB <input type="file" id="restoreFile" onchange="importDatabase(event)" class="hidden" accept=".json">
+                        Restore DB <input type="file" id="restoreFile" onchange="importDatabase(event)" class="hidden" accept=".sqlite,.db">
                     </label>
                 </div>
                 <button onclick="logout()" class="bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-rose-600/30 transition">Sign Out</button>
@@ -78,8 +71,8 @@
         <div class="bg-slate-800 border-t border-slate-700">
             <div class="max-w-7xl mx-auto px-4 flex overflow-x-auto no-scrollbar space-x-1 py-2">
                 <button onclick="switchTab('dashboard')" data-target="dashboard" class="tab-btn bg-amber-500 text-slate-900 font-bold px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap shadow">📊 Dashboard</button>
-                <button onclick="switchTab('users')" data-target="users" class="tab-btn text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">🔑 Portal Users</button>
-                <button onclick="switchTab('hremp')" data-target="hremp" class="tab-btn text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">👥 HR Employees</button>
+                <button onclick="switchTab('users')" data-target="users" class="tab-btn hr-nav-tab text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">🔑 Portal Users</button>
+                <button onclick="switchTab('hremp')" data-target="hremp" class="tab-btn hr-nav-tab text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">👥 HR Employees</button>
                 <button onclick="switchTab('income')" data-target="income" class="tab-btn finance-nav-tab text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">💰 Site Income</button>
                 <button onclick="switchTab('expenses')" data-target="expenses" class="tab-btn finance-nav-tab text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">📉 Other Expenses</button>
                 <button onclick="switchTab('purchase')" data-target="purchase" class="tab-btn finance-nav-tab text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">🛒 Purchase Requests</button>

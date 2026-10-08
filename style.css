@@ -1,24 +1,16 @@
-@keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-.animate-fade-in {
-    animation: fadeIn 0.2s ease-out forwards;
-}
+@import "tailwindcss";
 
 .tab-content {
     display: none;
 }
-
 .tab-content.active {
     display: block;
 }
 
+/* Hide scrollbars for clean tab navigation layout */
 .no-scrollbar::-webkit-scrollbar {
     display: none;
 }
-
 .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
