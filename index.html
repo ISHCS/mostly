@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bishoftu Site & Fleet Management System (Admin-Only Edit/Delete)</title>
+    <title>Adis Alamyahu Construction - Site & Fleet Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-slate-100 font-sans min-h-screen flex flex-col text-slate-800">
@@ -14,8 +13,8 @@
     <div id="authOverlay" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[200] flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-200 space-y-6 animate-fade-in">
             <div class="text-center space-y-2">
-                <div class="w-16 h-16 bg-amber-500 rounded-2xl mx-auto flex items-center justify-center text-slate-900 font-black text-2xl shadow-lg">BF</div>
-                <h1 class="text-2xl font-black text-slate-900">Bishoftu Portal</h1>
+                <div class="w-16 h-16 bg-amber-500 rounded-2xl mx-auto flex items-center justify-center text-slate-900 font-black text-2xl shadow-lg">AA</div>
+                <h1 class="text-2xl font-black text-slate-900">Adis Alamyahu Portal</h1>
                 <p class="text-sm text-slate-500">Site Operations & Financial Management</p>
             </div>
             
@@ -51,10 +50,10 @@
     <header class="bg-slate-900 text-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center font-black text-slate-900 text-lg">BF</div>
+                <div class="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center font-black text-slate-900 text-lg">AA</div>
                 <div>
-                    <h1 class="font-bold text-lg leading-tight">Bishoftu Site & Fleet Management</h1>
-                    <p class="text-xs text-slate-400">Admin-Only Edit & Delete RBAC Portal</p>
+                    <h1 class="font-bold text-lg leading-tight">Adis Alamyahu Construction</h1>
+                    <p class="text-xs text-slate-400">Site Operations & Fleet Management System</p>
                 </div>
             </div>
             
@@ -62,13 +61,13 @@
                 <div class="text-right hidden sm:block">
                     <div id="header-username-lbl" class="text-xs font-bold text-amber-400">manager</div>
                     <div id="header-role-lbl" class="text-[10px] text-slate-400 uppercase">ADMIN / MANAGER</div>
-                    <div id="header-location-lbl" class="text-[9px] text-emerald-400">Location: Bishoftu Main Site</div>
+                    <div id="header-location-lbl" class="text-[9px] text-emerald-400">Location: Main Construction Site</div>
                 </div>
                 <!-- Admin Only Database Backup / Restore Tools -->
                 <div id="adminDbTools" class="flex items-center gap-2">
-                    <button onclick="exportDatabase()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 transition">Backup .sqlite</button>
+                    <button onclick="exportDatabase()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 transition">Backup Data</button>
                     <label class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 cursor-pointer transition">
-                        Restore DB <input type="file" id="restoreFile" onchange="importDatabase(event)" class="hidden" accept=".sqlite,.json">
+                        Restore DB <input type="file" id="restoreFile" onchange="importDatabase(event)" class="hidden" accept=".json">
                     </label>
                 </div>
                 <button onclick="logout()" class="bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-rose-600/30 transition">Sign Out</button>

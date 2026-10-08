@@ -1,64 +1,88 @@
-let useFallbackStorage = true;
-let currentUser = { username: "manager", role: "manager", location: "Bishoftu Main Site" };
+let currentUser = { username: "manager", role: "manager", location: "Main Construction Site" };
 
-// Initialize database immediately on any server
+// Safe initialization that catches server-side storage blocks
 window.addEventListener('DOMContentLoaded', () => {
-    initFallbackDatabase();
-    refreshTables();
+    try {
+        initFallbackDatabase();
+        refreshTables();
+    } catch (err) {
+        console.error("Initialization error:", err);
+        alert("Warning: Local storage access restricted by browser/server. Some features may run in memory-only mode.");
+    }
 });
 
 function initFallbackDatabase() {
-    if (!localStorage.getItem('bishoftu_fallback_db')) {
-        const todayStr = new Date().toISOString().slice(0, 10);
-        const nowStr = new Date().toLocaleString();
-        const initialData = {
-            users: [{ id: 1, username: 'manager', password: '123', role: 'manager' }],
-            hremployees: [{ id: 1, fullname: 'Dawit Mekonnen', department: 'Operations', position: 'Site Supervisor', phone: '+251911234567', recorded_by: 'manager', recorded_date: nowStr }],
-            siteincome: [{ id: 1, date: todayStr, category: 'Aggregate Sales', client: 'Awash Construction Plc', amount: 150000, recorded_by: 'manager', recorded_date: nowStr }],
-            siteexpenses: [{ id: 1, date: todayStr, category: 'Utilities', description: 'Monthly Electric Power Bill', amount: 24000, recorded_by: 'manager', recorded_date: nowStr }],
-            purchases: [{ id: 1, date: todayStr, item: 'Hydraulic Oil ISO 68', qty: 5, cost: 12500, status: 'Pending', recorded_by: 'manager', recorded_date: nowStr }],
-            fuel: [{ id: 1, date: todayStr, equipment: 'Excavator EX-01', operator: 'Dawit M.', litres: 150, recorded_by: 'manager', recorded_date: nowStr }],
-            machines: [{ id: 1, date: todayStr, machine: 'Grader GR-02', hours: 42, status: 'Active', recorded_by: 'manager', recorded_date: nowStr }],
-            dumptrucks: [{ id: 1, date: todayStr, truck: 'Isuzu DT-05', trips: 12, volume: 96, recorded_by: 'manager', recorded_date: nowStr }],
-            pettycash: [{ id: 1, date: todayStr, description: 'Office supplies & water', amount: 2500, recorded_by: 'manager', recorded_date: nowStr }]
-        };
-        localStorage.setItem('bishoftu_fallback_db', JSON.stringify(initialData));
+    try {
+        if (!localStorage.getItem('adis_alamyahu_db')) {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const nowStr = new Date().toLocaleString();
+            const initialData = {
+                users: [{ id: 1, username: 'manager', password: '123', role: 'manager' }],
+                hremployees: [{ id: 1, fullname: 'Dawit Mekonnen', department: 'Operations', position: 'Site Supervisor', phone: '+251911234567', recorded_by: 'manager', recorded_date: nowStr }],
+                siteincome: [{ id: 1, date: todayStr, category: 'Aggregate Sales', client: 'Awash Construction Plc', amount: 150000, recorded_by: 'manager', recorded_date: nowStr }],
+                siteexpenses: [{ id: 1, date: todayStr, category: 'Utilities', description: 'Monthly Electric Power Bill', amount: 24000, recorded_by: 'manager', recorded_date: nowStr }],
+                purchases: [{ id: 1, date: todayStr, item: 'Hydraulic Oil ISO 68', qty: 5, cost: 12500, status: 'Pending', recorded_by: 'manager', recorded_date: nowStr }],
+                fuel: [{ id: 1, date: todayStr, equipment: 'Excavator EX-01', operator: 'Dawit M.', litres: 150, recorded_by: 'manager', recorded_date: nowStr }],
+                machines: [{ id: 1, date: todayStr, machine: 'Grader GR-02', hours: 42, status: 'Active', recorded_by: 'manager', recorded_date: nowStr }],
+                dumptrucks: [{ id: 1, date: todayStr, truck: 'Isuzu DT-05', trips: 12, volume: 96, recorded_by: 'manager', recorded_date: nowStr }],
+                pettycash: [{ id: 1, date: todayStr, description: 'Office supplies & water', amount: 2500, recorded_by: 'manager', recorded_date: nowStr }]
+            };
+            localStorage.setItem('adis_alamyahu_db', JSON.stringify(initialData));
+        }
+    } catch (e) {
+        console.warn("LocalStorage unavailable, using session memory.");
     }
 }
 
 function getTableData(tableName) {
-    const data = JSON.parse(localStorage.getItem('bishoftu_fallback_db') || '{}');
-    return data[tableName] || [];
+    try {
+        const data = JSON.parse(localStorage.getItem('adis_alamyahu_db') || '{}');
+        return data[tableName] || [];
+    } catch (e) {
+        return [];
+    }
 }
 
 function insertRecord(tableName, recordObj) {
-    recordObj.recorded_by = currentUser.username;
-    recordObj.recorded_date = new Date().toLocaleString();
+    try {
+        recordObj.recorded_by = currentUser.username;
+        recordObj.recorded_date = new Date().toLocaleString();
 
-    const data = JSON.parse(localStorage.getItem('bishoftu_fallback_db') || '{}');
-    if (!data[tableName]) data[tableName] = [];
-    recordObj.id = data[tableName].length > 0 ? Math.max(...data[tableName].map(r => r.id)) + 1 : 1;
-    data[tableName].push(recordObj);
-    localStorage.setItem('bishoftu_fallback_db', JSON.stringify(data));
-    refreshTables();
+        const data = JSON.parse(localStorage.getItem('adis_alamyahu_db') || '{}');
+        if (!data[tableName]) data[tableName] = [];
+        recordObj.id = data[tableName].length > 0 ? Math.max(...data[tableName].map(r => r.id)) + 1 : 1;
+        data[tableName].push(recordObj);
+        localStorage.setItem('adis_alamyahu_db', JSON.stringify(data));
+        refreshTables();
+    } catch (e) {
+        alert("Error saving record to server storage.");
+    }
 }
 
 function updateRecord(tableName, id, recordObj) {
-    const data = JSON.parse(localStorage.getItem('bishoftu_fallback_db') || '{}');
-    if (data[tableName]) {
-        data[tableName] = data[tableName].map(r => r.id === id ? { ...r, ...recordObj } : r);
-        localStorage.setItem('bishoftu_fallback_db', JSON.stringify(data));
+    try {
+        const data = JSON.parse(localStorage.getItem('adis_alamyahu_db') || '{}');
+        if (data[tableName]) {
+            data[tableName] = data[tableName].map(r => r.id === id ? { ...r, ...recordObj } : r);
+            localStorage.setItem('adis_alamyahu_db', JSON.stringify(data));
+        }
+        refreshTables();
+    } catch (e) {
+        alert("Error updating record.");
     }
-    refreshTables();
 }
 
 function deleteRecord(tableName, id) {
-    const data = JSON.parse(localStorage.getItem('bishoftu_fallback_db') || '{}');
-    if (data[tableName]) {
-        data[tableName] = data[tableName].filter(r => r.id !== id);
-        localStorage.setItem('bishoftu_fallback_db', JSON.stringify(data));
+    try {
+        const data = JSON.parse(localStorage.getItem('adis_alamyahu_db') || '{}');
+        if (data[tableName]) {
+            data[tableName] = data[tableName].filter(r => r.id !== id);
+            localStorage.setItem('adis_alamyahu_db', JSON.stringify(data));
+        }
+        refreshTables();
+    } catch (e) {
+        alert("Error deleting record.");
     }
-    refreshTables();
 }
 
 function handleLogin(event) {
@@ -66,7 +90,7 @@ function handleLogin(event) {
     const role = document.getElementById('loginRoleSelect').value;
     const username = document.getElementById('loginUsername').value;
     
-    currentUser = { username, role, location: "Bishoftu Main Site" };
+    currentUser = { username, role, location: "Main Construction Site" };
     document.getElementById('authOverlay').style.display = 'none';
     document.getElementById('header-username-lbl').innerText = username;
     document.getElementById('header-role-lbl').innerText = role.toUpperCase();
@@ -77,13 +101,26 @@ function handleLogin(event) {
 
 function applyRolePermissions() {
     const isAdmin = currentUser.role === 'manager';
+    const isHrOrAdmin = currentUser.role === 'manager' || currentUser.role === 'hr';
     const isFinanceOrAdmin = currentUser.role === 'manager' || currentUser.role === 'finance';
     const isOperatorOrAdmin = currentUser.role === 'manager' || currentUser.role === 'operator';
     
     const adminDbTools = document.getElementById('adminDbTools');
     if (adminDbTools) adminDbTools.style.display = isAdmin ? 'flex' : 'none';
 
-    const adminAddButtons = ['addUserBtn', 'addHrEmpBtn', 'addFuelBtn'];
+    // HR & Users access restricted to HR and Admin
+    const hrNavButtons = document.querySelectorAll('.hr-nav-tab');
+    hrNavButtons.forEach(el => {
+        el.style.display = isHrOrAdmin ? 'flex' : 'none';
+    });
+
+    const addUserBtn = document.getElementById('addUserBtn');
+    if (addUserBtn) addUserBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+
+    const addHrEmpBtn = document.getElementById('addHrEmpBtn');
+    if (addHrEmpBtn) addHrEmpBtn.style.display = isHrOrAdmin ? 'inline-flex' : 'none';
+
+    const adminAddButtons = ['addFuelBtn'];
     adminAddButtons.forEach(btnId => {
         const btn = document.getElementById(btnId);
         if (btn) btn.style.display = isAdmin ? 'inline-flex' : 'none';
@@ -118,6 +155,8 @@ function updateLoginHint(role) {
     const hintText = document.getElementById('loginHintText');
     if (role === 'manager') {
         hintText.innerText = "Role selected: Site Manager. Full CRUD, audit tracking & backup privileges enabled.";
+    } else if (role === 'hr') {
+        hintText.innerText = "Role selected: HR Manager. Access to Portal Users & HR Employee registration.";
     } else if (role === 'finance') {
         hintText.innerText = "Role selected: Finance Manager. Add records (Recorded By & Timestamp captured automatically).";
     } else if (role === 'operator') {
@@ -128,6 +167,10 @@ function updateLoginHint(role) {
 }
 
 function switchTab(targetId) {
+    if (['users', 'hremp'].includes(targetId) && currentUser.role !== 'manager' && currentUser.role !== 'hr') {
+        alert("Access Denied: HR and Portal Users management are restricted to HR and Admin roles.");
+        return;
+    }
     if (['income', 'expenses', 'purchase', 'pettycash'].includes(targetId) && currentUser.role !== 'manager' && currentUser.role !== 'finance') {
         alert("Access Denied: Financial dashboards are restricted.");
         return;
@@ -161,6 +204,14 @@ function checkAdminPermission() {
     return true;
 }
 
+function checkHrOrAdminPermission() {
+    if (currentUser.role !== 'manager' && currentUser.role !== 'hr') {
+        alert("Access Denied: Only HR and Admin roles can perform this action.");
+        return false;
+    }
+    return true;
+}
+
 function checkFinanceOrAdminPermission() {
     if (currentUser.role !== 'manager' && currentUser.role !== 'finance') {
         alert("Access Denied: Financial operations are restricted to Finance and Admin roles.");
@@ -177,12 +228,12 @@ function checkOperatorOrAdminPermission() {
     return true;
 }
 
-// --- CRUD FUNCTIONS ---
+// --- CRUD ACTIONS ---
 function addUserRecord() {
     if (!checkAdminPermission()) return;
     const username = prompt("Enter username:");
     const password = prompt("Enter password:");
-    const role = prompt("Enter role (manager/fleet/finance/operator):", "operator");
+    const role = prompt("Enter role (manager/hr/fleet/finance/operator):", "operator");
     if (username && password) insertRecord('users', { username, password, role });
 }
 function editUserRecord(id, oldUser, oldPass, oldRole) {
@@ -198,7 +249,7 @@ function deleteUserRecord(id) {
 }
 
 function addHrEmpRecord() {
-    if (!checkAdminPermission()) return;
+    if (!checkHrOrAdminPermission()) return;
     const fullname = prompt("Enter Full Name:");
     const department = prompt("Enter Department:", "Operations");
     const position = prompt("Enter Position:", "Operator");
@@ -379,171 +430,212 @@ function filterAndSort(records) {
 
 function refreshTables() {
     const isAdmin = currentUser.role === 'manager';
+    const isHrOrAdmin = currentUser.role === 'manager' || currentUser.role === 'hr';
     const isFinanceOrAdmin = currentUser.role === 'manager' || currentUser.role === 'finance';
 
-    // Users
-    const users = getTableData('users');
-    document.getElementById('userTableBody').innerHTML = users.map(u => `
-        <tr class="hover:bg-slate-50">
-            <td class="p-4 font-semibold">${u.username}</td>
-            <td class="p-4 text-slate-500">${u.password}</td>
-            <td class="p-4 uppercase text-xs font-bold text-amber-600">${u.role}</td>
-            <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
-                <button onclick="editUserRecord(${u.id}, '${u.username}', '${u.password}', '${u.role}')" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
-                <button onclick="deleteUserRecord(${u.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
-            </td>
-        </tr>
-    `).join('');
-    document.getElementById('userCount').innerText = `${users.length} records`;
+    // Users (HR & Admin only)
+    if (isHrOrAdmin) {
+        const users = getTableData('users');
+        const userBody = document.getElementById('userTableBody');
+        if (userBody) {
+            userBody.innerHTML = users.map(u => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4 font-semibold">${u.username}</td>
+                    <td class="p-4 text-slate-500">${u.password}</td>
+                    <td class="p-4 uppercase text-xs font-bold text-amber-600">${u.role}</td>
+                    <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
+                        <button onclick="editUserRecord(${u.id}, '${u.username}', '${u.password}', '${u.role}')" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
+                        <button onclick="deleteUserRecord(${u.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        const userCount = document.getElementById('userCount');
+        if (userCount) userCount.innerText = `${users.length} records`;
 
-    // HR Employees
-    const hrList = getTableData('hremployees');
-    document.getElementById('hrempTableBody').innerHTML = hrList.map(h => `
-        <tr class="hover:bg-slate-50">
-            <td class="p-4 font-semibold">${h.fullname}</td>
-            <td class="p-4 text-slate-600">${h.department}</td>
-            <td class="p-4 text-indigo-600 font-medium">${h.position}</td>
-            <td class="p-4 text-slate-500">${h.phone}<br><span class="text-[10px] text-slate-400">By: ${h.recorded_by || 'system'} (${h.recorded_date || '-'})</span></td>
-            <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
-                <button onclick="editHrEmpRecord(${h.id}, '${h.fullname}', '${h.department}', '${h.position}', '${h.phone}')" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
-                <button onclick="deleteHrEmpRecord(${h.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
-            </td>
-        </tr>
-    `).join('');
-    document.getElementById('hrempCount').innerText = `${hrList.length} records`;
+        // HR Employees
+        const hrList = getTableData('hremployees');
+        const hrBody = document.getElementById('hrempTableBody');
+        if (hrBody) {
+            hrBody.innerHTML = hrList.map(h => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4 font-semibold">${h.fullname}</td>
+                    <td class="p-4 text-slate-600">${h.department}</td>
+                    <td class="p-4 text-indigo-600 font-medium">${h.position}</td>
+                    <td class="p-4 text-slate-500">${h.phone}<br><span class="text-[10px] text-slate-400">By: ${h.recorded_by || 'system'} (${h.recorded_date || '-'})</span></td>
+                    <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
+                        <button onclick="editHrEmpRecord(${h.id}, '${h.fullname}', '${h.department}', '${h.position}', '${h.phone}')" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
+                        <button onclick="deleteHrEmpRecord(${h.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        const hrCount = document.getElementById('hrempCount');
+        if (hrCount) hrCount.innerText = `${hrList.length} records`;
+    }
 
-    // Site Income
+    // Site Income & Expenses
     if (isFinanceOrAdmin) {
         const incList = filterAndSort(getTableData('siteincome'));
         let totalIncome = incList.reduce((sum, i) => sum + i.amount, 0);
-        document.getElementById('incomeTableBody').innerHTML = incList.map(i => `
-            <tr class="hover:bg-slate-50">
-                <td class="p-4 text-slate-500 text-xs">${i.date}</td>
-                <td class="p-4 font-semibold">${i.category}</td>
-                <td class="p-4">${i.client}</td>
-                <td class="p-4 text-emerald-600 font-bold">ETB ${i.amount.toLocaleString()}<br><span class="text-[10px] text-slate-400 font-normal">By: ${i.recorded_by || 'system'} (${i.recorded_date || '-'})</span></td>
-                <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
-                    <button onclick="editIncomeRecord(${i.id}, '${i.date}', '${i.category}', '${i.client}', ${i.amount})" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
-                    <button onclick="deleteIncomeRecord(${i.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
-                </td>
-            </tr>
-        `).join('');
-        document.getElementById('incomeCount').innerText = `${incList.length} records`;
-        document.getElementById('kpi-income').innerText = `ETB ${totalIncome.toLocaleString()}`;
+        const incBody = document.getElementById('incomeTableBody');
+        if (incBody) {
+            incBody.innerHTML = incList.map(i => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4 text-slate-500 text-xs">${i.date}</td>
+                    <td class="p-4 font-semibold">${i.category}</td>
+                    <td class="p-4">${i.client}</td>
+                    <td class="p-4 text-emerald-600 font-bold">ETB ${i.amount.toLocaleString()}<br><span class="text-[10px] text-slate-400 font-normal">By: ${i.recorded_by || 'system'} (${i.recorded_date || '-'})</span></td>
+                    <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
+                        <button onclick="editIncomeRecord(${i.id}, '${i.date}', '${i.category}', '${i.client}', ${i.amount})" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
+                        <button onclick="deleteIncomeRecord(${i.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        const incCount = document.getElementById('incomeCount');
+        if (incCount) incCount.innerText = `${incList.length} records`;
+        const kpiInc = document.getElementById('kpi-income');
+        if (kpiInc) kpiInc.innerText = `ETB ${totalIncome.toLocaleString()}`;
 
-        // Other Expenses
         const expList = filterAndSort(getTableData('siteexpenses'));
         let totalExpenses = expList.reduce((sum, e) => sum + e.amount, 0);
-        document.getElementById('expensesTableBody').innerHTML = expList.map(e => `
-            <tr class="hover:bg-slate-50">
-                <td class="p-4 text-slate-500 text-xs">${e.date}</td>
-                <td class="p-4 font-semibold">${e.category}</td>
-                <td class="p-4 text-slate-600">${e.description}</td>
-                <td class="p-4 text-rose-600 font-bold">ETB ${e.amount.toLocaleString()}<br><span class="text-[10px] text-slate-400 font-normal">By: ${e.recorded_by || 'system'} (${e.recorded_date || '-'})</span></td>
-                <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
-                    <button onclick="editExpenseRecord(${e.id}, '${e.date}', '${e.category}', '${e.description}', ${e.amount})" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
-                    <button onclick="deleteExpenseRecord(${e.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
-                </td>
-            </tr>
-        `).join('');
-        document.getElementById('expensesCount').innerText = `${expList.length} records`;
-        document.getElementById('kpi-expenses').innerText = `ETB ${totalExpenses.toLocaleString()}`;
+        const expBody = document.getElementById('expensesTableBody');
+        if (expBody) {
+            expBody.innerHTML = expList.map(e => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4 text-slate-500 text-xs">${e.date}</td>
+                    <td class="p-4 font-semibold">${e.category}</td>
+                    <td class="p-4 text-slate-600">${e.description}</td>
+                    <td class="p-4 text-rose-600 font-bold">ETB ${e.amount.toLocaleString()}<br><span class="text-[10px] text-slate-400 font-normal">By: ${e.recorded_by || 'system'} (${e.recorded_date || '-'})</span></td>
+                    <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
+                        <button onclick="editExpenseRecord(${e.id}, '${e.date}', '${e.category}', '${e.description}', ${e.amount})" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
+                        <button onclick="deleteExpenseRecord(${e.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        const expCount = document.getElementById('expensesCount');
+        if (expCount) expCount.innerText = `${expList.length} records`;
+        const kpiExp = document.getElementById('kpi-expenses');
+        if (kpiExp) kpiExp.innerText = `ETB ${totalExpenses.toLocaleString()}`;
 
-        // Petty Cash Balance KPI & Table
         const pcList = filterAndSort(getTableData('pettycash'));
         let totalPetty = pcList.reduce((sum, p) => sum + p.amount, 0);
-        document.getElementById('kpi-petty').innerText = `ETB ${totalPetty.toLocaleString()}`;
+        const kpiPetty = document.getElementById('kpi-petty');
+        if (kpiPetty) kpiPetty.innerText = `ETB ${totalPetty.toLocaleString()}`;
 
-        document.getElementById('pettycashTableBody').innerHTML = pcList.map(p => `
-            <tr class="hover:bg-slate-50">
-                <td class="p-4 text-slate-500 text-xs">${p.date}</td>
-                <td class="p-4 font-semibold">${p.description}</td>
-                <td class="p-4 text-blue-600 font-bold">ETB ${p.amount.toLocaleString()}<br><span class="text-[10px] text-slate-400 font-normal">By: ${p.recorded_by || 'system'} (${p.recorded_date || '-'})</span></td>
-                <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
-                    <button onclick="editPettyCashRecord(${p.id}, '${p.date}', '${p.description}', ${p.amount})" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
-                    <button onclick="deletePettyCashRecord(${p.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
-                </td>
-            </tr>
-        `).join('');
-        document.getElementById('pettycashCount').innerText = `${pcList.length} records`;
+        const pcBody = document.getElementById('pettycashTableBody');
+        if (pcBody) {
+            pcBody.innerHTML = pcList.map(p => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4 text-slate-500 text-xs">${p.date}</td>
+                    <td class="p-4 font-semibold">${p.description}</td>
+                    <td class="p-4 text-blue-600 font-bold">ETB ${p.amount.toLocaleString()}<br><span class="text-[10px] text-slate-400 font-normal">By: ${p.recorded_by || 'system'} (${p.recorded_date || '-'})</span></td>
+                    <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
+                        <button onclick="editPettyCashRecord(${p.id}, '${p.date}', '${p.description}', ${p.amount})" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
+                        <button onclick="deletePettyCashRecord(${p.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        const pcCount = document.getElementById('pettycashCount');
+        if (pcCount) pcCount.innerText = `${pcList.length} records`;
     }
 
     // Purchases
     const purList = filterAndSort(getTableData('purchases'));
-    document.getElementById('purchaseTableBody').innerHTML = purList.map(p => `
-        <tr class="hover:bg-slate-50">
-            <td class="p-4 text-slate-500 text-xs">${p.date}</td>
-            <td class="p-4 font-semibold">${p.item}</td>
-            <td class="p-4">${p.qty}</td>
-            <td class="p-4 text-amber-600 font-bold">ETB ${p.cost.toLocaleString()}</td>
-            <td class="p-4"><span class="px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-bold">${p.status}</span><br><span class="text-[10px] text-slate-400">By: ${p.recorded_by || 'system'} (${p.recorded_date || '-'})</span></td>
-            <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
-                <button onclick="editPurchaseRecord(${p.id}, '${p.date}', '${p.item}', ${p.qty}, ${p.cost}, '${p.status}')" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
-                <button onclick="deletePurchaseRecord(${p.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
-            </td>
-        </tr>
-    `).join('');
-    document.getElementById('purchaseCount').innerText = `${purList.length} records`;
+    const purBody = document.getElementById('purchaseTableBody');
+    if (purBody) {
+        purBody.innerHTML = purList.map(p => `
+            <tr class="hover:bg-slate-50">
+                <td class="p-4 text-slate-500 text-xs">${p.date}</td>
+                <td class="p-4 font-semibold">${p.item}</td>
+                <td class="p-4">${p.qty}</td>
+                <td class="p-4 text-amber-600 font-bold">ETB ${p.cost.toLocaleString()}</td>
+                <td class="p-4"><span class="px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-bold">${p.status}</span><br><span class="text-[10px] text-slate-400">By: ${p.recorded_by || 'system'} (${p.recorded_date || '-'})</span></td>
+                <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
+                    <button onclick="editPurchaseRecord(${p.id}, '${p.date}', '${p.item}', ${p.qty}, ${p.cost}, '${p.status}')" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
+                    <button onclick="deletePurchaseRecord(${p.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    const purCount = document.getElementById('purchaseCount');
+    if (purCount) purCount.innerText = `${purList.length} records`;
 
     // Fuel
     const fuelList = filterAndSort(getTableData('fuel'));
     let totalFuel = fuelList.reduce((sum, f) => sum + f.litres, 0);
-    document.getElementById('fuelTableBody').innerHTML = fuelList.map(f => `
-        <tr class="hover:bg-slate-50">
-            <td class="p-4 text-slate-500 text-xs">${f.date}</td>
-            <td class="p-4 font-semibold">${f.equipment}</td>
-            <td class="p-4">${f.operator}</td>
-            <td class="p-4 text-emerald-600 font-bold">${f.litres} L<br><span class="text-[10px] text-slate-400 font-normal">By: ${f.recorded_by || 'system'} (${f.recorded_date || '-'})</span></td>
-            <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
-                <button onclick="editFuelRecord(${f.id}, '${f.date}', '${f.equipment}', '${f.operator}', ${f.litres})" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
-                <button onclick="deleteFuelRecord(${f.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
-            </td>
-        </tr>
-    `).join('');
-    document.getElementById('fuelCount').innerText = `${fuelList.length} records`;
-    document.getElementById('kpi-fuel').innerText = `${totalFuel} L`;
+    const fuelBody = document.getElementById('fuelTableBody');
+    if (fuelBody) {
+        fuelBody.innerHTML = fuelList.map(f => `
+            <tr class="hover:bg-slate-50">
+                <td class="p-4 text-slate-500 text-xs">${f.date}</td>
+                <td class="p-4 font-semibold">${f.equipment}</td>
+                <td class="p-4">${f.operator}</td>
+                <td class="p-4 text-emerald-600 font-bold">${f.litres} L<br><span class="text-[10px] text-slate-400 font-normal">By: ${f.recorded_by || 'system'} (${f.recorded_date || '-'})</span></td>
+                <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
+                    <button onclick="editFuelRecord(${f.id}, '${f.date}', '${f.equipment}', '${f.operator}', ${f.litres})" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
+                    <button onclick="deleteFuelRecord(${f.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    const fuelCount = document.getElementById('fuelCount');
+    if (fuelCount) fuelCount.innerText = `${fuelList.length} records`;
+    const kpiFuel = document.getElementById('kpi-fuel');
+    if (kpiFuel) kpiFuel.innerText = `${totalFuel} L`;
 
     // Machines
     const machineList = filterAndSort(getTableData('machines'));
-    document.getElementById('machineTableBody').innerHTML = machineList.map(m => `
-        <tr class="hover:bg-slate-50">
-            <td class="p-4 text-slate-500 text-xs">${m.date}</td>
-            <td class="p-4 font-semibold">${m.machine}</td>
-            <td class="p-4">${m.hours} hrs</td>
-            <td class="p-4"><span class="px-2 py-1 bg-emerald-100 text-emerald-800 rounded text-xs font-bold">${m.status}</span><br><span class="text-[10px] text-slate-400">By: ${m.recorded_by || 'system'} (${m.recorded_date || '-'})</span></td>
-            <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
-                <button onclick="editMachineRecord(${m.id}, '${m.date}', '${m.machine}', ${m.hours}, '${m.status}')" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
-                <button onclick="deleteMachineRecord(${m.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
-            </td>
-        </tr>
-    `).join('');
-    document.getElementById('machineCount').innerText = `${machineList.length} records`;
+    const macBody = document.getElementById('machineTableBody');
+    if (macBody) {
+        macBody.innerHTML = machineList.map(m => `
+            <tr class="hover:bg-slate-50">
+                <td class="p-4 text-slate-500 text-xs">${m.date}</td>
+                <td class="p-4 font-semibold">${m.machine}</td>
+                <td class="p-4">${m.hours} hrs</td>
+                <td class="p-4"><span class="px-2 py-1 bg-emerald-100 text-emerald-800 rounded text-xs font-bold">${m.status}</span><br><span class="text-[10px] text-slate-400">By: ${m.recorded_by || 'system'} (${m.recorded_date || '-'})</span></td>
+                <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
+                    <button onclick="editMachineRecord(${m.id}, '${m.date}', '${m.machine}', ${m.hours}, '${m.status}')" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
+                    <button onclick="deleteMachineRecord(${m.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    const macCount = document.getElementById('machineCount');
+    if (macCount) macCount.innerText = `${machineList.length} records`;
 
     // Dump Trucks
     const dtList = filterAndSort(getTableData('dumptrucks'));
-    document.getElementById('dumptruckTableBody').innerHTML = dtList.map(d => `
-        <tr class="hover:bg-slate-50">
-            <td class="p-4 text-slate-500 text-xs">${d.date}</td>
-            <td class="p-4 font-semibold">${d.truck}</td>
-            <td class="p-4">${d.trips}</td>
-            <td class="p-4 text-blue-600 font-bold">${d.volume} m³<br><span class="text-[10px] text-slate-400 font-normal">By: ${d.recorded_by || 'system'} (${d.recorded_date || '-'})</span></td>
-            <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
-                <button onclick="editDumpTruckRecord(${d.id}, '${d.date}', '${d.truck}', ${d.trips}, ${d.volume})" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
-                <button onclick="deleteDumpTruckRecord(${d.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
-            </td>
-        </tr>
-    `).join('');
-    document.getElementById('dumptruckCount').innerText = `${dtList.length} records`;
+    const dtBody = document.getElementById('dumptruckTableBody');
+    if (dtBody) {
+        dtBody.innerHTML = dtList.map(d => `
+            <tr class="hover:bg-slate-50">
+                <td class="p-4 text-slate-500 text-xs">${d.date}</td>
+                <td class="p-4 font-semibold">${d.truck}</td>
+                <td class="p-4">${d.trips}</td>
+                <td class="p-4 text-blue-600 font-bold">${d.volume} m³<br><span class="text-[10px] text-slate-400 font-normal">By: ${d.recorded_by || 'system'} (${d.recorded_date || '-'})</span></td>
+                <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
+                    <button onclick="editDumpTruckRecord(${d.id}, '${d.date}', '${d.truck}', ${d.trips}, ${d.volume})" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
+                    <button onclick="deleteDumpTruckRecord(${d.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    const dtCount = document.getElementById('dumptruckCount');
+    if (dtCount) dtCount.innerText = `${dtList.length} records`;
 }
 
 function exportDatabase() {
     if (!checkAdminPermission()) return;
-    const data = localStorage.getItem('bishoftu_fallback_db');
+    const data = localStorage.getItem('adis_alamyahu_db');
     const blob = new Blob([data], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `bishoftu_backup_${new Date().toISOString().slice(0,10)}.json`;
+    a.download = `adis_alamyahu_backup_${new Date().toISOString().slice(0,10)}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -556,7 +648,7 @@ function importDatabase(event) {
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
-            localStorage.setItem('bishoftu_fallback_db', e.target.result);
+            localStorage.setItem('adis_alamyahu_db', e.target.result);
             refreshTables();
             alert("Database successfully restored from backup!");
         } catch (err) {
@@ -569,7 +661,9 @@ function importDatabase(event) {
 function filterTable(tableId, query) {
     const table = document.getElementById(tableId);
     if (!table) return;
-    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    const tbody = table.getElementsByTagName('tbody')[0];
+    if (!tbody) return;
+    const rows = tbody.getElementsByTagName('tr');
     for (let i = 0; i < rows.length; i++) {
         let match = false;
         const cells = rows[i].getElementsByTagName('td');
