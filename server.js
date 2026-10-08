@@ -7,7 +7,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Request logger for cPanel debugging
+// Request logger for debugging
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
     next();
@@ -18,8 +18,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const dataFile = path.join(__dirname, 'database.json');
 
-// In-memory fallback store if disk writing is restricted by cPanel permissions
-let memoryStore = {
+const defaultStore = {
     users: [
         { id: 1, username: 'manager', password: '123', role: 'manager' },
         { id: 2, username: 'hrstaff', password: '123', role: 'hr' },
@@ -44,25 +43,33 @@ let memoryStore = {
 };
 
 function readData() {
+    let data = JSON.parse(JSON.stringify(defaultStore));
     try {
-        if (!fs.existsSync(dataFile)) {
-            fs.writeFileSync(dataFile, JSON.stringify(memoryStore, null, 2));
-            return memoryStore;
+        if (fs.existsSync(dataFile)) {
+            const raw = fs.readFileSync(dataFile, 'utf8');
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+                data = { ...data, ...parsed };
+            }
         }
-        const raw = fs.readFileSync(dataFile, 'utf8');
-        return JSON.parse(raw);
     } catch (e) {
-        console.log("Using in-memory store due to file permissions:", e.message);
-        return memoryStore;
+        console.log("Error reading database file, using defaults:", e.message);
     }
+
+    // Auto-seed default users if missing or empty
+    if (!data.users || data.users.length === 0) {
+        data.users = defaultStore.users;
+        writeData(data);
+    }
+
+    return data;
 }
 
 function writeData(data) {
-    memoryStore = data;
     try {
         fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
     } catch (e) {
-        console.log("Disk write skipped (using memory):", e.message);
+        console.log("Disk write skipped:", e.message);
     }
 }
 
