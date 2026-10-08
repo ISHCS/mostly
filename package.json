@@ -1,7 +1,7 @@
 {
   "name": "adis-alamyahu-construction",
   "version": "1.0.0",
-  "description": "Adis Alamyahu Construction Site & Fleet Management System",
+  "description": "Centralized Construction & Fleet Management System",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
