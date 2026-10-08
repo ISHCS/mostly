@@ -1,6 +1,6 @@
 let db = null;
 let SQL = null;
-let currentUser = { username: "manager", role: "manager", location: "Main Construction Site" };
+let currentUser = { username: "Guest", role: "none", location: "Main Construction Site" };
 
 window.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -11,7 +11,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         initSqlDatabase();
         applyRolePermissions();
-        refreshTables();
     } catch (err) {
         console.error("SQLite initialization error:", err);
         alert("Failed to initialize SQLite database engine.");
@@ -24,6 +23,11 @@ function initSqlDatabase() {
         try {
             const uInt8Array = new Uint8Array(JSON.parse(savedBinary));
             db = new SQL.Database(uInt8Array);
+            
+            db.run(`
+                CREATE TABLE IF NOT EXISTS storeitems (id INTEGER PRIMARY KEY AUTOINCREMENT, item_code TEXT, item_name TEXT, category TEXT, qty REAL, unit TEXT, unit_cost REAL, recorded_by TEXT, recorded_date TEXT);
+                CREATE TABLE IF NOT EXISTS storereleases (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, item_id INTEGER, item_code TEXT, item_name TEXT, qty_released REAL, recipient TEXT, project_site TEXT, recorded_by TEXT, recorded_date TEXT);
+            `);
             return;
         } catch (e) {
             console.warn("Could not load saved binary, creating new database.");
@@ -32,10 +36,11 @@ function initSqlDatabase() {
 
     db = new SQL.Database();
     
-    // Create actual SQLite Tables
     db.run(`
         CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT, role TEXT);
         CREATE TABLE IF NOT EXISTS hremployees (id INTEGER PRIMARY KEY AUTOINCREMENT, fullname TEXT, department TEXT, position TEXT, phone TEXT, recorded_by TEXT, recorded_date TEXT);
+        CREATE TABLE IF NOT EXISTS storeitems (id INTEGER PRIMARY KEY AUTOINCREMENT, item_code TEXT, item_name TEXT, category TEXT, qty REAL, unit TEXT, unit_cost REAL, recorded_by TEXT, recorded_date TEXT);
+        CREATE TABLE IF NOT EXISTS storereleases (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, item_id INTEGER, item_code TEXT, item_name TEXT, qty_released REAL, recipient TEXT, project_site TEXT, recorded_by TEXT, recorded_date TEXT);
         CREATE TABLE IF NOT EXISTS siteincome (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, category TEXT, client TEXT, amount REAL, recorded_by TEXT, recorded_date TEXT);
         CREATE TABLE IF NOT EXISTS siteexpenses (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, category TEXT, description TEXT, amount REAL, recorded_by TEXT, recorded_date TEXT);
         CREATE TABLE IF NOT EXISTS purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, item TEXT, qty REAL, cost REAL, status TEXT, recorded_by TEXT, recorded_date TEXT);
@@ -45,7 +50,6 @@ function initSqlDatabase() {
         CREATE TABLE IF NOT EXISTS pettycash (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, description TEXT, amount REAL, recorded_by TEXT, recorded_date TEXT);
     `);
 
-    // Insert sample default records & users with distinct roles
     const todayStr = new Date().toISOString().slice(0, 10);
     const nowStr = new Date().toLocaleString();
 
@@ -56,6 +60,8 @@ function initSqlDatabase() {
     db.run(`INSERT INTO users (username, password, role) VALUES ('fleet', '123', 'fleet');`);
 
     db.run(`INSERT INTO hremployees (fullname, department, position, phone, recorded_by, recorded_date) VALUES ('Dawit Mekonnen', 'Operations', 'Site Supervisor', '+251911234567', 'manager', '${nowStr}');`);
+    db.run(`INSERT INTO storeitems (item_code, item_name, category, qty, unit, unit_cost, recorded_by, recorded_date) VALUES ('MTR-001', 'Portland Cement (Dangote)', 'Building Materials', 450, 'Bags', 1150, 'manager', '${nowStr}');`);
+    db.run(`INSERT INTO storeitems (item_code, item_name, category, qty, unit, unit_cost, recorded_by, recorded_date) VALUES ('MTR-002', 'Rebar 12mm Deformed', 'Structural Steel', 120, 'Bundles', 8500, 'manager', '${nowStr}');`);
     db.run(`INSERT INTO siteincome (date, category, client, amount, recorded_by, recorded_date) VALUES ('${todayStr}', 'Aggregate Sales', 'Awash Construction Plc', 150000, 'manager', '${nowStr}');`);
     db.run(`INSERT INTO siteexpenses (date, category, description, amount, recorded_by, recorded_date) VALUES ('${todayStr}', 'Utilities', 'Monthly Electric Power Bill', 24000, 'manager', '${nowStr}');`);
     db.run(`INSERT INTO purchases (date, item, qty, cost, status, recorded_by, recorded_date) VALUES ('${todayStr}', 'Hydraulic Oil ISO 68', 5, 12500, 'Pending', 'manager', '${nowStr}');`);
@@ -106,7 +112,6 @@ function handleLogin(event) {
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
     
-    // Query database to securely authenticate & retrieve stored role
     const users = executeSql(`SELECT * FROM users WHERE username = ? AND password = ?;`, [username, password]);
     
     if (users.length === 0) {
@@ -149,6 +154,12 @@ function applyRolePermissions() {
     const addHrEmpBtn = document.getElementById('addHrEmpBtn');
     if (addHrEmpBtn) addHrEmpBtn.style.display = isHrOrAdmin ? 'inline-flex' : 'none';
 
+    const addStoreBtn = document.getElementById('addStoreBtn');
+    if (addStoreBtn) addStoreBtn.style.display = isFinanceOrAdmin ? 'inline-flex' : 'none';
+
+    const addReleaseBtn = document.getElementById('addReleaseBtn');
+    if (addReleaseBtn) addReleaseBtn.style.display = isFinanceOrAdmin ? 'inline-flex' : 'none';
+
     const adminAddButtons = ['addFuelBtn'];
     adminAddButtons.forEach(btnId => {
         const btn = document.getElementById(btnId);
@@ -161,7 +172,7 @@ function applyRolePermissions() {
         if (btn) btn.style.display = isOperatorOrAdmin ? 'inline-flex' : 'none';
     });
 
-    const financeAddButtons = ['addIncomeBtn', 'addExpenseBtn', 'addPurchaseBtn', 'addPettyBtn'];
+    const financeAddButtons = ['addIncomeBtn', 'addExpenseBtn', 'addPettyBtn'];
     financeAddButtons.forEach(btnId => {
         const btn = document.getElementById(btnId);
         if (btn) btn.style.display = isFinanceOrAdmin ? 'inline-flex' : 'none';
@@ -185,8 +196,8 @@ function switchTab(targetId) {
         alert("Access Denied: HR and Portal Users management are restricted to HR and Admin roles.");
         return;
     }
-    if (['income', 'expenses', 'purchase', 'pettycash'].includes(targetId) && currentUser.role !== 'manager' && currentUser.role !== 'finance') {
-        alert("Access Denied: Financial dashboards are restricted.");
+    if (['store', 'storereleases', 'income', 'expenses', 'pettycash'].includes(targetId) && currentUser.role !== 'manager' && currentUser.role !== 'finance') {
+        alert("Access Denied: Financial & Store modules are restricted.");
         return;
     }
 
@@ -204,15 +215,19 @@ function switchTab(targetId) {
         activeBtn.classList.remove('text-slate-300');
         activeBtn.classList.add('bg-amber-500', 'text-slate-900', 'font-bold', 'shadow');
     }
+    refreshTables();
 }
 
 function logout() {
+    currentUser = { username: "Guest", role: "none", location: "Main Construction Site" };
+    document.getElementById('loginUsername').value = '';
+    document.getElementById('loginPassword').value = '';
     document.getElementById('authOverlay').style.display = 'flex';
 }
 
 function checkAdminPermission() {
     if (currentUser.role !== 'manager') {
-        alert("Access Denied: Only Site Managers (Admins) are permitted to edit or delete records.");
+        alert("Access Denied: Only Site Managers (Admins) are permitted to edit, approve, or delete records.");
         return false;
     }
     return true;
@@ -228,7 +243,7 @@ function checkHrOrAdminPermission() {
 
 function checkFinanceOrAdminPermission() {
     if (currentUser.role !== 'manager' && currentUser.role !== 'finance') {
-        alert("Access Denied: Financial operations are restricted to Finance and Admin roles.");
+        alert("Access Denied: Financial & Store operations are restricted to Finance and Admin roles.");
         return false;
     }
     return true;
@@ -242,7 +257,7 @@ function checkOperatorOrAdminPermission() {
     return true;
 }
 
-// --- CRUD ACTIONS USING SQL ---
+// --- CRUD ACTIONS & REGISTRATION ---
 function addUserRecord() {
     if (!checkAdminPermission()) return;
     const username = prompt("Enter username:");
@@ -296,6 +311,103 @@ function deleteHrEmpRecord(id) {
     }
 }
 
+function addStoreItemRecord() {
+    if (!checkFinanceOrAdminPermission()) return;
+    const itemCode = prompt("Enter Item Code (e.g. MTR-003):", "MTR-");
+    const itemName = prompt("Enter Item Name:");
+    const category = prompt("Enter Category:", "Building Materials");
+    const qty = parseFloat(prompt("Enter Quantity:", "100"));
+    const unit = prompt("Enter Unit (e.g. Bags, Pcs, Litres):", "Pcs");
+    const unitCost = parseFloat(prompt("Enter Unit Cost (ETB):", "500"));
+    const nowStr = new Date().toLocaleString();
+    if (itemCode && itemName && !isNaN(qty) && !isNaN(unitCost)) {
+        runSql(`INSERT INTO storeitems (item_code, item_name, category, qty, unit, unit_cost, recorded_by, recorded_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`, [itemCode, itemName, category, qty, unit, unitCost, currentUser.username, nowStr]);
+    }
+}
+function editStoreItemRecord(id, oldCode, oldName, oldCat, oldQty, oldUnit, oldCost) {
+    if (!checkAdminPermission()) return;
+    const itemCode = prompt("Edit Item Code:", oldCode);
+    const itemName = prompt("Edit Item Name:", oldName);
+    const category = prompt("Edit Category:", oldCat);
+    const qty = parseFloat(prompt("Edit Quantity:", oldQty));
+    const unit = prompt("Edit Unit:", oldUnit);
+    const unitCost = parseFloat(prompt("Edit Unit Cost:", oldCost));
+    if (itemCode && itemName && !isNaN(qty)) {
+        runSql(`UPDATE storeitems SET item_code = ?, item_name = ?, category = ?, qty = ?, unit = ?, unit_cost = ? WHERE id = ?;`, [itemCode, itemName, category, qty, unit, unitCost, id]);
+    }
+}
+function deleteStoreItemRecord(id) {
+    if (!checkAdminPermission()) return;
+    if (confirm("Delete this store item?")) {
+        runSql(`DELETE FROM storeitems WHERE id = ?;`, [id]);
+    }
+}
+
+function addStoreReleaseRecord() {
+    if (!checkFinanceOrAdminPermission()) return;
+    
+    // Explicitly select all available inventory items
+    const storeItems = executeSql(`SELECT id, item_code, item_name, qty, unit FROM storeitems WHERE qty > 0;`);
+    
+    if (storeItems.length === 0) {
+        alert("No store items with available stock found!");
+        return;
+    }
+
+    let itemListStr = storeItems.map(s => `ID: ${s.id} | ${s.item_code} - ${s.item_name} (Stock: ${s.qty} ${s.unit})`).join('\n');
+    const inputId = prompt("Enter the Item ID you wish to release:\n\n" + itemListStr);
+    if (!inputId) return;
+    
+    const selectedId = parseInt(inputId.trim(), 10);
+    const itemObj = storeItems.find(s => s.id === selectedId);
+    
+    if (!itemObj) {
+        alert("Invalid Item ID selected. Please check the ID and try again.");
+        return;
+    }
+
+    const qtyInput = prompt(`Enter quantity to release for [${itemObj.item_code} - ${itemObj.item_name}]\nAvailable Stock: ${itemObj.qty} ${itemObj.unit}:`, "1");
+    if (!qtyInput) return;
+    
+    const qtyToRelease = parseFloat(qtyInput.trim());
+    if (isNaN(qtyToRelease) || qtyToRelease <= 0) {
+        alert("Invalid quantity entered.");
+        return;
+    }
+
+    if (qtyToRelease > itemObj.qty) {
+        alert(`Error: Cannot release ${qtyToRelease} ${itemObj.unit}. Only ${itemObj.qty} available in stock.`);
+        return;
+    }
+
+    const recipient = prompt("Enter Recipient Name (e.g. Dawit M.):", "Site Team");
+    if (!recipient) return;
+    
+    const projectSite = prompt("Enter Project / Site Location:", "Main Site Block A");
+    const date = prompt("Enter Release Date (YYYY-MM-DD):", new Date().toISOString().slice(0, 10));
+    const nowStr = new Date().toLocaleString();
+
+    if (date) {
+        // Execute insert into releases
+        db.run(`INSERT INTO storereleases (date, item_id, item_code, item_name, qty_released, recipient, project_site, recorded_by, recorded_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`, 
+            [date, itemObj.id, itemObj.item_code, itemObj.item_name, qtyToRelease, recipient, projectSite || "Main Site", currentUser.username, nowStr]);
+
+        // Deduct quantity from store items table
+        const newQty = itemObj.qty - qtyToRelease;
+        db.run(`UPDATE storeitems SET qty = ? WHERE id = ?;`, [newQty, itemObj.id]);
+        
+        saveSqlDatabase();
+        refreshTables();
+        alert(`Successfully released ${qtyToRelease} ${itemObj.unit} of ${itemObj.item_name}. Remaining stock: ${newQty} ${itemObj.unit}.`);
+    }
+}
+function deleteStoreReleaseRecord(id) {
+    if (!checkAdminPermission()) return;
+    if (confirm("Delete this release record?")) {
+        runSql(`DELETE FROM storereleases WHERE id = ?;`, [id]);
+    }
+}
+
 function addIncomeRecord() {
     if (!checkFinanceOrAdminPermission()) return;
     const date = prompt("Enter Date (YYYY-MM-DD):", new Date().toISOString().slice(0, 10));
@@ -328,10 +440,10 @@ function addExpenseRecord() {
     if (!checkFinanceOrAdminPermission()) return;
     const date = prompt("Enter Date (YYYY-MM-DD):", new Date().toISOString().slice(0, 10));
     const category = prompt("Enter Expense Category:", "Utilities");
-    const description = prompt("Enter Description:");
+    const description = prompt("Enter Expense Description:");
     const amount = parseFloat(prompt("Enter Amount (ETB):", "10000"));
     const nowStr = new Date().toLocaleString();
-    if (date && category && !isNaN(amount)) {
+    if (date && category && description && !isNaN(amount)) {
         runSql(`INSERT INTO siteexpenses (date, category, description, amount, recorded_by, recorded_date) VALUES (?, ?, ?, ?, ?, ?);`, [date, category, description, amount, currentUser.username, nowStr]);
     }
 }
@@ -353,15 +465,15 @@ function deleteExpenseRecord(id) {
 }
 
 function addPurchaseRecord() {
-    if (!checkFinanceOrAdminPermission()) return;
     const date = prompt("Enter Date (YYYY-MM-DD):", new Date().toISOString().slice(0, 10));
-    const item = prompt("Enter Item Description:");
+    const item = prompt("Enter Item Description / Part Name:");
     const qty = parseFloat(prompt("Enter Quantity:", "1"));
-    const cost = parseFloat(prompt("Enter Cost (ETB):", "5000"));
-    const status = prompt("Enter Status:", "Pending");
+    const cost = parseFloat(prompt("Enter Estimated Cost (ETB):", "5000"));
+    const status = "Pending";
     const nowStr = new Date().toLocaleString();
-    if (date && item) {
+    if (date && item && !isNaN(qty) && !isNaN(cost)) {
         runSql(`INSERT INTO purchases (date, item, qty, cost, status, recorded_by, recorded_date) VALUES (?, ?, ?, ?, ?, ?, ?);`, [date, item, qty, cost, status, currentUser.username, nowStr]);
+        alert("Purchase request submitted successfully and marked as Pending for Manager review.");
     }
 }
 function editPurchaseRecord(id, oldDate, oldItem, oldQty, oldCost, oldStatus) {
@@ -370,7 +482,7 @@ function editPurchaseRecord(id, oldDate, oldItem, oldQty, oldCost, oldStatus) {
     const item = prompt("Edit Item:", oldItem);
     const qty = parseFloat(prompt("Edit Qty:", oldQty));
     const cost = parseFloat(prompt("Edit Cost:", oldCost));
-    const status = prompt("Edit Status:", oldStatus);
+    const status = prompt("Edit Status (Pending / Approved / Completed / Rejected):", oldStatus);
     if (date && item) {
         runSql(`UPDATE purchases SET date = ?, item = ?, qty = ?, cost = ?, status = ? WHERE id = ?;`, [date, item, qty, cost, status, id]);
     }
@@ -512,7 +624,7 @@ function getFilteredSql(tableName) {
     if (conditions.length > 0) {
         query += ` WHERE ` + conditions.join(' AND ');
     }
-    query += ` ORDER BY date DESC`;
+    query += ` ORDER BY id DESC`;
 
     return executeSql(query, params);
 }
@@ -564,8 +676,51 @@ function refreshTables() {
         if (hrCount) hrCount.innerText = `${hrList.length} records`;
     }
 
-    // Site Income & Expenses & Petty Cash
+    // Store Inventory, Releases & Finance Modules
     if (isFinanceOrAdmin) {
+        // Store Items
+        const storeList = executeSql(`SELECT * FROM storeitems ORDER BY id DESC;`);
+        const storeBody = document.getElementById('storeTableBody');
+        if (storeBody) {
+            storeBody.innerHTML = storeList.map(s => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4 font-mono font-bold text-slate-600">${s.item_code}</td>
+                    <td class="p-4 font-semibold">${s.item_name}</td>
+                    <td class="p-4 text-slate-500">${s.category}</td>
+                    <td class="p-4 font-bold text-amber-600">${s.qty}</td>
+                    <td class="p-4 text-slate-500">${s.unit}</td>
+                    <td class="p-4 font-semibold text-slate-700">ETB ${s.unit_cost.toLocaleString()}<br><span class="text-[10px] text-slate-400 font-normal">By: ${s.recorded_by || 'system'} (${s.recorded_date || '-'})</span></td>
+                    <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
+                        <button onclick="editStoreItemRecord(${s.id}, '${s.item_code}', '${s.item_name}', '${s.category}', ${s.qty}, '${s.unit}', ${s.unit_cost})" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
+                        <button onclick="deleteStoreItemRecord(${s.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        const storeCount = document.getElementById('storeCount');
+        if (storeCount) storeCount.innerText = `${storeList.length} items`;
+
+        // Store Releases
+        const releaseList = getFilteredSql('storereleases');
+        const releaseBody = document.getElementById('releasesTableBody');
+        if (releaseBody) {
+            releaseBody.innerHTML = releaseList.map(r => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4 text-slate-500 text-xs">${r.date}</td>
+                    <td class="p-4 font-semibold">${r.item_code} - ${r.item_name}</td>
+                    <td class="p-4 font-bold text-rose-600">${r.qty_released}</td>
+                    <td class="p-4 text-slate-700">${r.recipient}</td>
+                    <td class="p-4 text-slate-600">${r.project_site}<br><span class="text-[10px] text-slate-400">By: ${r.recorded_by || 'system'} (${r.recorded_date || '-'})</span></td>
+                    <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
+                        <button onclick="deleteStoreReleaseRecord(${r.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        const releasesCount = document.getElementById('releasesCount');
+        if (releasesCount) releasesCount.innerText = `${releaseList.length} releases`;
+
+        // Site Income
         const incList = getFilteredSql('siteincome');
         let totalIncome = incList.reduce((sum, i) => sum + i.amount, 0);
         const incBody = document.getElementById('incomeTableBody');
@@ -588,6 +743,7 @@ function refreshTables() {
         const kpiInc = document.getElementById('kpi-income');
         if (kpiInc) kpiInc.innerText = `ETB ${totalIncome.toLocaleString()}`;
 
+        // Site Expenses
         const expList = getFilteredSql('siteexpenses');
         let totalExpenses = expList.reduce((sum, e) => sum + e.amount, 0);
         const expBody = document.getElementById('expensesTableBody');
@@ -610,6 +766,7 @@ function refreshTables() {
         const kpiExp = document.getElementById('kpi-expenses');
         if (kpiExp) kpiExp.innerText = `ETB ${totalExpenses.toLocaleString()}`;
 
+        // Petty Cash
         const pcList = getFilteredSql('pettycash');
         let totalPetty = pcList.reduce((sum, p) => sum + p.amount, 0);
         const kpiPetty = document.getElementById('kpi-petty');
@@ -643,9 +800,12 @@ function refreshTables() {
                 <td class="p-4 font-semibold">${p.item}</td>
                 <td class="p-4">${p.qty}</td>
                 <td class="p-4 text-amber-600 font-bold">ETB ${p.cost.toLocaleString()}</td>
-                <td class="p-4"><span class="px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-bold">${p.status}</span><br><span class="text-[10px] text-slate-400">By: ${p.recorded_by || 'system'} (${p.recorded_date || '-'})</span></td>
+                <td class="p-4">
+                    <span class="px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-bold">${p.status}</span><br>
+                    <span class="text-[10px] text-slate-400">Requested By: ${p.recorded_by || 'system'} (${p.recorded_date || '-'})</span>
+                </td>
                 <td class="p-4 space-x-2" style="display: ${isAdmin ? '' : 'none'};">
-                    <button onclick="editPurchaseRecord(${p.id}, '${p.date}', '${p.item}', ${p.qty}, ${p.cost}, '${p.status}')" class="text-amber-600 hover:underline text-xs font-semibold">Edit</button>
+                    <button onclick="editPurchaseRecord(${p.id}, '${p.date}', '${p.item}', ${p.qty}, ${p.cost}, '${p.status}')" class="text-amber-600 hover:underline text-xs font-semibold">Review / Approve</button>
                     <button onclick="deletePurchaseRecord(${p.id})" class="text-rose-600 hover:underline text-xs font-semibold">Delete</button>
                 </td>
             </tr>
