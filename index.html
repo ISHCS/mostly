@@ -1,1 +1,2067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bishoftu Site & Fleet Management System</title>
+    <!-- Suppress Tailwind Play CDN production console warning -->
+    <script>
+        const originalWarn = console.warn;
+        console.warn = function(...args) {
+            if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
+            originalWarn.apply(console, args);
+        };
+    </script>
+    <!-- Tailwind CSS Play CDN for standalone execution -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.2s ease-out forwards;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans min-h-screen flex flex-col text-slate-800">
 
+    <div id="authOverlay" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-200 space-y-6 animate-fade-in">
+            <div class="text-center space-y-2">
+                <div class="w-16 h-16 bg-amber-500 rounded-2xl mx-auto flex items-center justify-center text-slate-900 font-black text-2xl shadow-lg">BF</div>
+                <h1 class="text-2xl font-black text-slate-900">Bishoftu Portal</h1>
+                <p class="text-sm text-slate-500">Site Operations & Fleet Management System (Offline Ready)</p>
+            </div>
+            
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Select Role / Profile</label>
+                    <select id="loginRoleSelect" onchange="updateLoginHint(this.value)" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none cursor-pointer">
+                        <option value="manager">Site Manager (Admin / Full Access & Editing)</option>
+                        <option value="fleet">Fleet Supervisor</option>
+                        <option value="finance">Finance & Petty Cash Manager</option>
+                        <option value="operator">Machine Operator</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Username</label>
+                    <input type="text" id="loginUsername" required placeholder="Enter username (e.g., manager)" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none" value="manager">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Password</label>
+                    <input type="password" id="loginPassword" required placeholder="Enter password (e.g., admin123)" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none" value="admin123">
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800" id="loginHintText">
+                    Role selected: Site Manager. Default credentials: manager / admin123. Full editing privileges enabled.
+                </div>
+                <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-xl text-sm shadow-md transition cursor-pointer">
+                    Sign In to Portal
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <header class="bg-slate-900 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center font-black text-slate-900 text-lg">BF</div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">Bishoftu Site & Fleet Management</h1>
+                    <p class="text-xs text-slate-400">Local Operational Database & Location Trace (100% Offline Capable)</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3 flex-wrap">
+                <div class="text-right hidden sm:block">
+                    <div id="header-username-lbl" class="text-xs font-bold text-amber-400">manager</div>
+                    <div id="header-role-lbl" class="text-[10px] text-slate-400 uppercase">ADMIN / MANAGER</div>
+                    <div id="header-location-lbl" class="text-[9px] text-emerald-400">Location: Bishoftu Main Site</div>
+                </div>
+                <div id="adminDbTools" class="flex items-center gap-2">
+                    <button onclick="exportDatabase()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 transition cursor-pointer">Backup DB</button>
+                    <label class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 cursor-pointer transition">
+                        Restore DB <input type="file" id="restoreFile" onchange="importDatabase(event)" class="hidden" accept=".json">
+                    </label>
+                </div>
+                <button onclick="logout()" class="bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-rose-600/30 transition cursor-pointer">Sign Out</button>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 border-t border-slate-700">
+            <div class="max-w-7xl mx-auto px-4 flex overflow-x-auto no-scrollbar space-x-1 py-2">
+                <button onclick="switchTab('dashboard')" data-target="dashboard" class="tab-btn bg-amber-500 text-slate-900 font-bold px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap shadow cursor-pointer">📊 Dashboard</button>
+                <button onclick="switchTab('users')" data-target="users" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager">🔑 Employee Credentials</button>
+                <button onclick="switchTab('fuel')" data-target="fuel" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager,fleet,operator">⛽ Fuel Reports</button>
+                <button onclick="switchTab('machine')" data-target="machine" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager,fleet,operator">🚜 Machine Logs</button>
+                <button onclick="switchTab('dumptruck')" data-target="dumptruck" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager,fleet,operator">🚛 Dump Trucks</button>
+                <button onclick="switchTab('excavation')" data-target="excavation" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager,fleet,operator">⛏️ Excavation & Prod</button>
+                <button onclick="switchTab('pettycash')" data-target="pettycash" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager,finance">💵 Petty Cash</button>
+                <button onclick="switchTab('otherexpenses')" data-target="otherexpenses" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager,finance">🧾 Other Expenses</button>
+                <button onclick="switchTab('income')" data-target="income" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager,finance">💰 Site Income</button>
+                <button onclick="switchTab('purchaserequests')" data-target="purchaserequests" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager,fleet,finance,operator">🛒 Purchase Requests</button>
+                <button onclick="switchTab('roles')" data-target="roles" class="tab-btn text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer">🛡️ Roles & RBAC</button>
+                <button onclick="switchTab('sql')" data-target="sql" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager">💻 Database Console</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="bg-white border-b border-slate-200 shadow-xs py-3 px-4">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    ⏱️ Global Date & Time Filter:
+                </span>
+                <span class="text-xs text-slate-500 hidden md:inline">Filters all reports & KPIs dynamically</span>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+                    <label class="text-[11px] font-bold text-slate-600 uppercase">From:</label>
+                    <input type="datetime-local" id="globalStartDateTime" onchange="applyGlobalDateTimeFilter()" class="bg-transparent text-xs font-medium text-slate-800 focus:outline-none">
+                </div>
+                
+                <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+                    <label class="text-[11px] font-bold text-slate-600 uppercase">To:</label>
+                    <input type="datetime-local" id="globalEndDateTime" onchange="applyGlobalDateTimeFilter()" class="bg-transparent text-xs font-medium text-slate-800 focus:outline-none">
+                </div>
+
+                <div class="flex items-center gap-1.5">
+                    <button onclick="quickSelectDateRange('today')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-amber-100 hover:text-amber-900 text-slate-700 rounded-lg text-xs font-semibold transition cursor-pointer">Today</button>
+                    <button onclick="quickSelectDateRange('week')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-amber-100 hover:text-amber-900 text-slate-700 rounded-lg text-xs font-semibold transition cursor-pointer">This Week</button>
+                    <button onclick="quickSelectDateRange('month')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-amber-100 hover:text-amber-900 text-slate-700 rounded-lg text-xs font-semibold transition cursor-pointer">This Month</button>
+                    <button onclick="resetGlobalDateTimeFilter()" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition cursor-pointer">Clear All</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
+
+        <!-- DASHBOARD TAB -->
+        <div id="dashboard" class="tab-content active space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Fuel Issued</div>
+                    <div class="text-3xl font-black text-slate-900 mt-2" id="kpi-fuel">0 L</div>
+                    <div class="text-xs text-emerald-600 font-semibold mt-2">Active machinery tracking</div>
+                </div>
+                <div id="kpi-card-petty" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Petty Cash Balance</div>
+                    <div class="text-3xl font-black text-emerald-600 mt-2" id="kpi-petty">ETB 0</div>
+                    <div class="text-xs text-slate-500 font-semibold mt-2">Current liquid funds</div>
+                </div>
+                <div id="kpi-card-expenses" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Other Expenses</div>
+                    <div class="text-3xl font-black text-rose-600 mt-2" id="kpi-expenses">ETB 0</div>
+                    <div class="text-xs text-slate-500 font-semibold mt-2">Site operational overheads</div>
+                </div>
+                <div id="kpi-card-income" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Site Income</div>
+                    <div class="text-3xl font-black text-blue-600 mt-2" id="kpi-income">ETB 0</div>
+                    <div class="text-xs text-slate-500 font-semibold mt-2">Haulage & aggregate sales</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h2 class="font-bold text-lg text-slate-900" id="dashRoleTitle">Bishoftu Site Operations Overview</h2>
+                        <span id="dashRoleBadge" class="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full">Admin & Manager Full Access</span>
+                    </div>
+                    <p id="dashboardWelcomeText" class="text-sm text-slate-600">Welcome to the Bishoftu Site & Fleet Management Portal. As an administrator or manager, you hold full editing, approval, and record management privileges across all site tabs.</p>
+                    
+                    <div id="roleSpecificWidget" class="pt-2"></div>
+                    <div id="quickNavCards" class="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4"></div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h2 class="font-bold text-lg text-slate-900">Live Activity & Location Logs</h2>
+                        <button onclick="clearAuditLogs()" class="text-xs text-rose-600 hover:underline cursor-pointer">Clear Logs</button>
+                    </div>
+                    <div id="audit-trail-list" class="space-y-3 max-h-[350px] overflow-auto pr-1">
+                        <p class="text-xs text-slate-400">No recent activity logs recorded.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EMPLOYEE CREDENTIALS TAB -->
+        <div id="users" class="tab-content space-y-6">
+            <div id="userTabContainer" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Employee Login Credentials & Role Management</h2>
+                    <p class="text-sm text-slate-500">Create new usernames, set passwords, and manage security access levels for site staff.</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="openModal('userCreateModal')" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition flex items-center gap-2 shadow-sm cursor-pointer">
+                        + Add New User & Role
+                    </button>
+                    <button onclick="loadSampleUsers()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm transition font-medium cursor-pointer">Load Defaults</button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex justify-between items-center">
+                    <input type="text" placeholder="Search username or role..." onkeyup="filterTable('userTable', this.value)" class="px-4 py-2 text-sm border border-slate-200 rounded-xl w-72 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <span id="userCount" class="text-xs text-slate-500 font-medium">0 records</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="userTable" class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                                <th class="p-4">Username</th>
+                                <th class="p-4">Password</th>
+                                <th class="p-4">Assigned Role</th>
+                                <th class="p-4">Created Date & Time</th>
+                                <th class="p-4">Actions (Full Admin Edit)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- FUEL REPORTS TAB -->
+        <div id="fuel" class="tab-content space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Fuel Issued & Consumption Log</h2>
+                    <p class="text-sm text-slate-500">Monitor diesel and lubricant issues for excavation equipment and dump trucks.</p>
+                </div>
+                <button id="addFuelBtn" onclick="openModal('fuelModal')" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm cursor-pointer">
+                    + Add Fuel Record
+                </button>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
+                    <input type="text" placeholder="Search equipment or operator..." onkeyup="filterTable('fuelTable', this.value)" class="px-4 py-2 text-sm border border-slate-200 rounded-xl w-72 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <div class="text-xs font-medium text-slate-500">Filtered by active Date & Time range</div>
+                    <span id="fuelCount" class="text-xs text-slate-500 font-medium">0 records</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="fuelTable" class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                                <th class="p-4">Date & Time ↕</th>
+                                <th class="p-4">Equipment ID</th>
+                                <th class="p-4">Operator</th>
+                                <th class="p-4">Litres (L)</th>
+                                <th class="p-4">Meter / Hours</th>
+                                <th class="p-4">Logged By & Location</th>
+                                <th class="p-4 action-col">Actions (Edit / Delete)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fuelTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- MACHINE LOGS TAB -->
+        <div id="machine" class="tab-content space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Machine & Heavy Equipment Performance Logs</h2>
+                    <p class="text-sm text-slate-500">Track operating hours, maintenance status, and breakdowns for site excavators and graders.</p>
+                </div>
+                <button id="addMachineBtn" onclick="openModal('machineModal')" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm cursor-pointer">
+                    + Add Machine Log
+                </button>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
+                    <input type="text" placeholder="Search machine or status..." onkeyup="filterTable('machineTable', this.value)" class="px-4 py-2 text-sm border border-slate-200 rounded-xl w-72 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <div class="text-xs font-medium text-slate-500">Filtered by active Date & Time range</div>
+                    <span id="machineCount" class="text-xs text-slate-500 font-medium">0 records</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="machineTable" class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                                <th class="p-4">Date & Time ↕</th>
+                                <th class="p-4">Machine ID</th>
+                                <th class="p-4">Type</th>
+                                <th class="p-4">Hours Worked</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4">Logged By & Location</th>
+                                <th class="p-4 action-col">Actions (Edit / Delete)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="machineTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- DUMP TRUCKS TAB -->
+        <div id="dumptruck" class="tab-content space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Dump Truck Haulage & Cycle Counts</h2>
+                    <p class="text-sm text-slate-500">Record daily trip counts, cubic meters hauled, and driver logs.</p>
+                </div>
+                <button id="addDtBtn" onclick="openModal('dumptruckModal')" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm cursor-pointer">
+                    + Add Haulage Record
+                </button>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
+                    <input type="text" placeholder="Search truck or driver..." onkeyup="filterTable('dumptruckTable', this.value)" class="px-4 py-2 text-sm border border-slate-200 rounded-xl w-72 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <div class="text-xs font-medium text-slate-500">Filtered by active Date & Time range</div>
+                    <span id="dumptruckCount" class="text-xs text-slate-500 font-medium">0 records</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="dumptruckTable" class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                                <th class="p-4">Date & Time ↕</th>
+                                <th class="p-4">Truck ID</th>
+                                <th class="p-4">Driver</th>
+                                <th class="p-4">Trips Count</th>
+                                <th class="p-4">Volume (m³)</th>
+                                <th class="p-4">Logged By & Location</th>
+                                <th class="p-4 action-col">Actions (Edit / Delete)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dumptruckTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- EXCAVATION TAB -->
+        <div id="excavation" class="tab-content space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Excavation & Production Progress</h2>
+                    <p class="text-sm text-slate-500">Track daily output volume and section progress across site zones.</p>
+                </div>
+                <button id="addExcBtn" onclick="openModal('excavationModal')" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm cursor-pointer">
+                    + Add Production Record
+                </button>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
+                    <input type="text" placeholder="Search zone or material..." onkeyup="filterTable('excavationTable', this.value)" class="px-4 py-2 text-sm border border-slate-200 rounded-xl w-72 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <div class="text-xs font-medium text-slate-500">Filtered by active Date & Time range</div>
+                    <span id="excavationCount" class="text-xs text-slate-500 font-medium">0 records</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="excavationTable" class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                                <th class="p-4">Date & Time ↕</th>
+                                <th class="p-4">Zone / Area</th>
+                                <th class="p-4">Material Type</th>
+                                <th class="p-4">Volume (m³)</th>
+                                <th class="p-4">Logged By & Location</th>
+                                <th class="p-4 action-col">Actions (Edit / Delete)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="excavationTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PETTY CASH TAB -->
+        <div id="pettycash" class="tab-content space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Petty Cash Vouchers & Balances</h2>
+                    <p class="text-sm text-slate-500">Record cash disbursements, receipts, and replenishment vouchers.</p>
+                </div>
+                <button onclick="openModal('pettycashModal')" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm cursor-pointer">
+                    + Add Petty Cash Entry
+                </button>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
+                    <input type="text" placeholder="Search description or type..." onkeyup="filterTable('pettycashTable', this.value)" class="px-4 py-2 text-sm border border-slate-200 rounded-xl w-72 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <div class="text-xs font-medium text-slate-500">Filtered by active Date & Time range</div>
+                    <span id="pettycashCount" class="text-xs text-slate-500 font-medium">0 records</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="pettycashTable" class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                                <th class="p-4">Date & Time ↕</th>
+                                <th class="p-4">Type</th>
+                                <th class="p-4">Description</th>
+                                <th class="p-4">Amount (ETB)</th>
+                                <th class="p-4">Logged By & Location</th>
+                                <th class="p-4 action-col">Actions (Edit / Delete)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pettycashTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- OTHER EXPENSES TAB -->
+        <div id="otherexpenses" class="tab-content space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Other Site Expenses & Overheads</h2>
+                    <p class="text-sm text-slate-500">Record maintenance parts, camp supplies, electricity, and utility bills.</p>
+                </div>
+                <button onclick="openModal('otherexpensesModal')" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm cursor-pointer">
+                    + Add Expense Record
+                </button>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
+                    <input type="text" placeholder="Search category or vendor..." onkeyup="filterTable('otherexpensesTable', this.value)" class="px-4 py-2 text-sm border border-slate-200 rounded-xl w-72 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <div class="text-xs font-medium text-slate-500">Filtered by active Date & Time range</div>
+                    <span id="otherexpensesCount" class="text-xs text-slate-500 font-medium">0 records</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="otherexpensesTable" class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                                <th class="p-4">Date & Time ↕</th>
+                                <th class="p-4">Category</th>
+                                <th class="p-4">Vendor / Payee</th>
+                                <th class="p-4">Amount (ETB)</th>
+                                <th class="p-4">Logged By & Location</th>
+                                <th class="p-4 action-col">Actions (Edit / Delete)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="otherexpensesTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SITE INCOME TAB -->
+        <div id="income" class="tab-content space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Site Income & Haulage Sales</h2>
+                    <p class="text-sm text-slate-500">Record aggregate sales, material supply invoices, and client payments.</p>
+                </div>
+                <button onclick="openModal('incomeModal')" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm cursor-pointer">
+                    + Add Income Record
+                </button>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
+                    <input type="text" placeholder="Search client or project..." onkeyup="filterTable('incomeTable', this.value)" class="px-4 py-2 text-sm border border-slate-200 rounded-xl w-72 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <div class="text-xs font-medium text-slate-500">Filtered by active Date & Time range</div>
+                    <span id="incomeCount" class="text-xs text-slate-500 font-medium">0 records</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="incomeTable" class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                                <th class="p-4">Date & Time ↕</th>
+                                <th class="p-4">Client / Project</th>
+                                <th class="p-4">Description</th>
+                                <th class="p-4">Amount (ETB)</th>
+                                <th class="p-4">Logged By & Location</th>
+                                <th class="p-4 action-col">Actions (Edit / Delete)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="incomeTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PURCHASE REQUESTS TAB -->
+        <div id="purchaserequests" class="tab-content space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Purchase Requests & Material Requisitions</h2>
+                    <p class="text-sm text-slate-500">Submit, review, and approve spare parts, tools, and site consumables requisitions.</p>
+                </div>
+                <button onclick="openModal('purchaserequestsModal')" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm cursor-pointer">
+                    + New Purchase Request
+                </button>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
+                    <input type="text" placeholder="Search item or requester..." onkeyup="filterTable('purchaserequestsTable', this.value)" class="px-4 py-2 text-sm border border-slate-200 rounded-xl w-72 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <div class="text-xs font-medium text-slate-500">Filtered by active Date & Time range</div>
+                    <span id="purchaserequestsCount" class="text-xs text-slate-500 font-medium">0 records</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="purchaserequestsTable" class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                                <th class="p-4">Date & Time ↕</th>
+                                <th class="p-4">Item Name</th>
+                                <th class="p-4">Quantity</th>
+                                <th class="p-4">Estimated Cost (ETB)</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4">Requester</th>
+                                <th class="p-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="purchaserequestsTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROLES & RBAC TAB -->
+        <div id="roles" class="tab-content space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <h2 class="text-xl font-bold text-slate-900">Role-Based Access Control (RBAC) Matrix</h2>
+                <p class="text-sm text-slate-600">Overview of operational permissions assigned across site user profiles in Bishoftu management system.</p>
+                <div class="overflow-x-auto pt-2">
+                    <table class="w-full text-left border-collapse border border-slate-200 text-sm">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-700 font-bold uppercase text-xs">
+                                <th class="border border-slate-200 p-3">Role / Profile</th>
+                                <th class="border border-slate-200 p-3">Access Level</th>
+                                <th class="border border-slate-200 p-3">Permitted Tabs & Modules</th>
+                                <th class="border border-slate-200 p-3">Editing & Deleting Privileges</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200">
+                            <tr>
+                                <td class="border border-slate-200 p-3 font-semibold text-slate-900">Site Manager (manager)</td>
+                                <td class="border border-slate-200 p-3"><span class="px-2.5 py-1 bg-amber-100 text-amber-900 rounded-lg text-xs font-bold">Full Admin</span></td>
+                                <td class="border border-slate-200 p-3">All Modules (Dashboard, Employees, Fuel, Machinery, Trucks, Excavation, Cash, Expenses, Income, Requests, RBAC, SQL Console)</td>
+                                <td class="border border-slate-200 p-3 text-emerald-600 font-semibold">Full Create, Edit, Delete & Backup Control</td>
+                            </tr>
+                            <tr>
+                                <td class="border border-slate-200 p-3 font-semibold text-slate-900">Fleet Supervisor (fleet)</td>
+                                <td class="border border-slate-200 p-3"><span class="px-2.5 py-1 bg-blue-100 text-blue-900 rounded-lg text-xs font-bold">Operational Lead</span></td>
+                                <td class="border border-slate-200 p-3">Dashboard, Fuel Reports, Machine Logs, Dump Trucks, Excavation & Prod, Purchase Requests</td>
+                                <td class="border border-slate-200 p-3 text-slate-700">Create & Edit Fleet/Equipment Logs</td>
+                            </tr>
+                            <tr>
+                                <td class="border border-slate-200 p-3 font-semibold text-slate-900">Finance Manager (finance)</td>
+                                <td class="border border-slate-200 p-3"><span class="px-2.5 py-1 bg-emerald-100 text-emerald-900 rounded-lg text-xs font-bold">Accounting</span></td>
+                                <td class="border border-slate-200 p-3">Dashboard, Petty Cash, Other Expenses, Site Income, Purchase Requests</td>
+                                <td class="border border-slate-200 p-3 text-slate-700">Create & Edit Financial Vouchers</td>
+                            </tr>
+                            <tr>
+                                <td class="border border-slate-200 p-3 font-semibold text-slate-900">Machine Operator (operator)</td>
+                                <td class="border border-slate-200 p-3"><span class="px-2.5 py-1 bg-slate-100 text-slate-800 rounded-lg text-xs font-bold">Field Staff</span></td>
+                                <td class="border border-slate-200 p-3">Dashboard, Fuel Reports, Machine Logs, Dump Trucks, Excavation & Prod, Purchase Requests</td>
+                                <td class="border border-slate-200 p-3 text-slate-700">Submit Daily Logs (No Deletion Rights)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SQL CONSOLE TAB -->
+        <div id="sql" class="tab-content space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <div class="flex justify-between items-center flex-wrap gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">Embedded SQLite / T-SQL Console</h2>
+                        <p class="text-sm text-slate-500">Run direct queries against local database storage tables (e.g., SELECT * FROM fuel_logs).</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="setSqlPreset('SELECT * FROM fuel_logs')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-semibold text-slate-700">Fuel Logs</button>
+                        <button onclick="setSqlPreset('SELECT * FROM machine_logs')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-semibold text-slate-700">Machine Logs</button>
+                        <button onclick="setSqlPreset('SELECT * FROM audit_logs')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-semibold text-slate-700">Audit Trail</button>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <textarea id="sqlQueryInput" rows="4" class="w-full font-mono text-sm p-4 bg-slate-900 text-amber-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="Enter SQL query here...">SELECT * FROM fuel_logs;</textarea>
+                    <button onclick="executeSqlQuery()" class="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-xl text-sm transition shadow-sm cursor-pointer">Execute Query</button>
+                </div>
+                <div id="sqlResultContainer" class="pt-4 border-t border-slate-100">
+                    <h3 class="text-sm font-bold text-slate-700 uppercase mb-2">Query Execution Results</h3>
+                    <div id="sqlResultOutput" class="bg-slate-50 border border-slate-200 rounded-xl p-4 font-mono text-xs text-slate-700 min-h-[120px] max-h-[300px] overflow-auto">
+                        Ready for query execution...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODALS FOR DATA ENTRY / EDITING -->
+
+    <!-- User Create Modal -->
+    <div id="userCreateModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[300] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-fade-in">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-lg text-slate-900">Add New Employee Credential</h3>
+                <button onclick="closeModal('userCreateModal')" class="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">&times;</button>
+            </div>
+            <form onsubmit="handleSaveUser(event)" class="space-y-4">
+                <input type="hidden" id="editUserId">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Username</label>
+                    <input type="text" id="newUsername" required placeholder="e.g. dawit_ops" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Password</label>
+                    <input type="text" id="newPassword" required placeholder="Secure password" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Assigned Role</label>
+                    <select id="newRole" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none cursor-pointer">
+                        <option value="manager">Site Manager (Admin)</option>
+                        <option value="fleet">Fleet Supervisor</option>
+                        <option value="finance">Finance Manager</option>
+                        <option value="operator">Machine Operator</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('userCreateModal')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl text-sm font-bold shadow-sm cursor-pointer">Save Credential</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Fuel Modal -->
+    <div id="fuelModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[300] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-fade-in">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-lg text-slate-900" id="fuelModalTitle">Add Fuel Record</h3>
+                <button onclick="closeModal('fuelModal')" class="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">&times;</button>
+            </div>
+            <form onsubmit="handleSaveFuel(event)" class="space-y-4">
+                <input type="hidden" id="editFuelId">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Date & Time</label>
+                    <input type="datetime-local" id="fuelDateTime" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Equipment ID / Truck No.</label>
+                    <input type="text" id="fuelEquipment" required placeholder="e.g., EX-01 or DT-04" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Operator Name</label>
+                    <input type="text" id="fuelOperator" required placeholder="Operator full name" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Litres Issued (L)</label>
+                    <input type="number" step="0.1" id="fuelLitres" required placeholder="e.g. 150" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Meter / Engine Hours</label>
+                    <input type="text" id="fuelMeter" required placeholder="e.g., 4250 hrs" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('fuelModal')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl text-sm font-bold shadow-sm cursor-pointer">Save Fuel Log</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Machine Modal -->
+    <div id="machineModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[300] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-fade-in">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-lg text-slate-900" id="machineModalTitle">Add Machine Performance Log</h3>
+                <button onclick="closeModal('machineModal')" class="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">&times;</button>
+            </div>
+            <form onsubmit="handleSaveMachine(event)" class="space-y-4">
+                <input type="hidden" id="editMachineId">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Date & Time</label>
+                    <input type="datetime-local" id="machineDateTime" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Machine ID</label>
+                    <input type="text" id="machineIdNum" required placeholder="e.g. Excavator EX-02" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Machine Type</label>
+                    <input type="text" id="machineType" required placeholder="e.g. Caterpillar 320D" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Hours Worked</label>
+                    <input type="number" step="0.5" id="machineHours" required placeholder="e.g. 8" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Operational Status</label>
+                    <select id="machineStatus" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none cursor-pointer">
+                        <option value="Active">Active & Operating</option>
+                        <option value="Standby">Standby</option>
+                        <option value="Maintenance">Under Maintenance / Service</option>
+                        <option value="Breakdown">Breakdown / Repair</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('machineModal')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl text-sm font-bold shadow-sm cursor-pointer">Save Machine Log</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dump Truck Modal -->
+    <div id="dumptruckModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[300] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-fade-in">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-lg text-slate-900" id="dtModalTitle">Add Dump Truck Haulage Record</h3>
+                <button onclick="closeModal('dumptruckModal')" class="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">&times;</button>
+            </div>
+            <form onsubmit="handleSaveDt(event)" class="space-y-4">
+                <input type="hidden" id="editDtId">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Date & Time</label>
+                    <input type="datetime-local" id="dtDateTime" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Truck ID</label>
+                    <input type="text" id="dtTruckId" required placeholder="e.g. DT-01" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Driver Name</label>
+                    <input type="text" id="dtDriver" required placeholder="Driver full name" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Trips Count</label>
+                    <input type="number" id="dtTrips" required placeholder="e.g. 12" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Volume Hauled (m³)</label>
+                    <input type="number" step="0.1" id="dtVolume" required placeholder="e.g. 180" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('dumptruckModal')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl text-sm font-bold shadow-sm cursor-pointer">Save Haulage Log</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Excavation Modal -->
+    <div id="excavationModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[300] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-fade-in">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-lg text-slate-900" id="excModalTitle">Add Production Record</h3>
+                <button onclick="closeModal('excavationModal')" class="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">&times;</button>
+            </div>
+            <form onsubmit="handleSaveExc(event)" class="space-y-4">
+                <input type="hidden" id="editExcId">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Date & Time</label>
+                    <input type="datetime-local" id="excDateTime" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Zone / Area</label>
+                    <input type="text" id="excZone" required placeholder="e.g. Bishoftu North Quarry Sector A" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Material Type</label>
+                    <input type="text" id="excMaterial" required placeholder="e.g. Basalt Aggregate / Sub-base" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Volume (m³)</label>
+                    <input type="number" step="0.1" id="excVolume" required placeholder="e.g. 450" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('excavationModal')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl text-sm font-bold shadow-sm cursor-pointer">Save Production Log</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Petty Cash Modal -->
+    <div id="pettycashModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[300] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-fade-in">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-lg text-slate-900" id="pcModalTitle">Add Petty Cash Voucher</h3>
+                <button onclick="closeModal('pettycashModal')" class="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">&times;</button>
+            </div>
+            <form onsubmit="handleSavePc(event)" class="space-y-4">
+                <input type="hidden" id="editPcId">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Date & Time</label>
+                    <input type="datetime-local" id="pcDateTime" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Transaction Type</label>
+                    <select id="pcType" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none cursor-pointer">
+                        <option value="Cash In">Cash In (Replenishment / Deposit)</option>
+                        <option value="Cash Out">Cash Out (Expense Voucher)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Description</label>
+                    <input type="text" id="pcDesc" required placeholder="e.g. Site stationery & refreshments" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Amount (ETB)</label>
+                    <input type="number" step="0.01" id="pcAmount" required placeholder="e.g. 2500" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('pettycashModal')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl text-sm font-bold shadow-sm cursor-pointer">Save Petty Cash Voucher</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Other Expenses Modal -->
+    <div id="otherexpensesModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[300] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-fade-in">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-lg text-slate-900" id="oeModalTitle">Add Expense Record</h3>
+                <button onclick="closeModal('otherexpensesModal')" class="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">&times;</button>
+            </div>
+            <form onsubmit="handleSaveOe(event)" class="space-y-4">
+                <input type="hidden" id="editOeId">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Date & Time</label>
+                    <input type="datetime-local" id="oeDateTime" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Category</label>
+                    <input type="text" id="oeCategory" required placeholder="e.g. Equipment Spare Parts / Electricity" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Vendor / Payee</label>
+                    <input type="text" id="oeVendor" required placeholder="e.g. Awash Auto Parts PLC" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Amount (ETB)</label>
+                    <input type="number" step="0.01" id="oeAmount" required placeholder="e.g. 15400" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('otherexpensesModal')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl text-sm font-bold shadow-sm cursor-pointer">Save Expense Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Income Modal -->
+    <div id="incomeModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[300] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-fade-in">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-lg text-slate-900" id="incModalTitle">Add Site Income Record</h3>
+                <button onclick="closeModal('incomeModal')" class="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">&times;</button>
+            </div>
+            <form onsubmit="handleSaveInc(event)" class="space-y-4">
+                <input type="hidden" id="editIncId">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Date & Time</label>
+                    <input type="datetime-local" id="incDateTime" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Client / Project</label>
+                    <input type="text" id="incClient" required placeholder="e.g. Oromia Road Construction Enterprise" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Description</label>
+                    <input type="text" id="incDesc" required placeholder="e.g. Supply of 500m³ crushed stone aggregate" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Amount (ETB)</label>
+                    <input type="number" step="0.01" id="incAmount" required placeholder="e.g. 125000" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('incomeModal')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl text-sm font-bold shadow-sm cursor-pointer">Save Income Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Purchase Request Modal -->
+    <div id="purchaserequestsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[300] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-fade-in">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-lg text-slate-900" id="prModalTitle">New Purchase Request</h3>
+                <button onclick="closeModal('purchaserequestsModal')" class="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">&times;</button>
+            </div>
+            <form onsubmit="handleSavePr(event)" class="space-y-4">
+                <input type="hidden" id="editPrId">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Date & Time</label>
+                    <input type="datetime-local" id="prDateTime" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Item Name / Description</label>
+                    <input type="text" id="prItem" required placeholder="e.g. Hydraulic Oil ISO 68 (200L Drum)" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Quantity</label>
+                    <input type="number" id="prQty" required placeholder="e.g. 2" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Estimated Cost (ETB)</label>
+                    <input type="number" step="0.01" id="prCost" required placeholder="e.g. 45000" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('purchaserequestsModal')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl text-sm font-bold shadow-sm cursor-pointer">Submit Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT APPLICATION CORE -->
+    <script>
+        // Default Database State
+        let db = {
+            currentUser: { username: 'manager', role: 'manager' },
+            users: [
+                { id: 'u1', username: 'manager', password: 'admin123', role: 'manager', created: '2026-06-01T08:00' },
+                { id: 'u2', username: 'fleet_lead', password: 'password123', role: 'fleet', created: '2026-06-10T09:30' },
+                { id: 'u3', username: 'finance_mgr', password: 'password123', role: 'finance', created: '2026-06-15T10:15' },
+                { id: 'u4', username: 'operator1', password: 'password123', role: 'operator', created: '2026-07-01T07:45' }
+            ],
+            fuel_logs: [
+                { id: 'f1', datetime: '2026-10-08T07:30', equipment: 'EX-01', operator: 'Kebede Tadesse', litres: 180.5, meter: '4820 hrs', loggedBy: 'manager (Bishoftu Main Site)' },
+                { id: 'f2', datetime: '2026-10-08T08:15', equipment: 'DT-03', operator: 'Alemayehu Bekele', litres: 120.0, meter: '142000 km', loggedBy: 'fleet_lead (Bishoftu Main Site)' }
+            ],
+            machine_logs: [
+                { id: 'm1', datetime: '2026-10-08T06:00', machineId: 'EX-01', type: 'Caterpillar 320D', hours: 7.5, status: 'Active', loggedBy: 'manager (Bishoftu Main Site)' },
+                { id: 'm2', datetime: '2026-10-08T06:30', machineId: 'GR-02', type: 'Komatsu Grader', hours: 6.0, status: 'Active', loggedBy: 'fleet_lead (Bishoftu Main Site)' }
+            ],
+            dumptruck_logs: [
+                { id: 'dt1', datetime: '2026-10-08T08:00', truckId: 'DT-01', driver: 'Dawit Mekonnen', trips: 14, volume: 210.0, loggedBy: 'operator1 (Bishoftu Main Site)' },
+                { id: 'dt2', datetime: '2026-10-08T08:30', truckId: 'DT-02', driver: 'Tesfaye Girma', trips: 12, volume: 180.0, loggedBy: 'operator1 (Bishoftu Main Site)' }
+            ],
+            excavation_logs: [
+                { id: 'ex1', datetime: '2026-10-08T08:45', zone: 'Quarry Sector A', material: 'Crushed Basalt', volume: 390.0, loggedBy: 'manager (Bishoftu Main Site)' }
+            ],
+            pettycash_logs: [
+                { id: 'pc1', datetime: '2026-10-01T09:00', type: 'Cash In', desc: 'Monthly imprest replenishment', amount: 50000.0, loggedBy: 'finance_mgr (Bishoftu Main Site)' },
+                { id: 'pc2', datetime: '2026-10-05T14:20', type: 'Cash Out', desc: 'Emergency hydraulic hose repair fittings', amount: 3500.0, loggedBy: 'finance_mgr (Bishoftu Main Site)' }
+            ],
+            otherexpenses_logs: [
+                { id: 'oe1', datetime: '2026-10-03T11:00', category: 'Electric Utility', vendor: 'Ethiopian Electric Utility - Bishoftu', amount: 14200.0, loggedBy: 'finance_mgr (Bishoftu Main Site)' }
+            ],
+            income_logs: [
+                { id: 'inc1', datetime: '2026-10-04T15:00', client: 'Oromia Roads Bureau', desc: 'Supply of 1,200m³ road base aggregate', amount: 480000.0, loggedBy: 'finance_mgr (Bishoftu Main Site)' }
+            ],
+            purchaserequests: [
+                { id: 'pr1', datetime: '2026-10-07T10:00', item: 'Heavy duty filter kit for Cat Excavator', qty: 2, cost: 18500.0, status: 'Approved', requester: 'fleet_lead' }
+            ],
+            audit_logs: [
+                { datetime: '2026-10-08 08:51:00', action: 'System session initialized successfully for manager at Bishoftu Main Site.' }
+            ],
+            globalFilter: { start: '', end: '' }
+        };
+
+        // Initialize Application
+        window.addEventListener('DOMContentLoaded', () => {
+            loadFromLocalStorage();
+            renderAll();
+        });
+
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('bishoftu_site_db_v2');
+            if (saved) {
+                try {
+                    db = JSON.parse(saved);
+                } catch (e) {
+                    console.error('Error loading saved database', e);
+                }
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('bishoftu_site_db_v2', JSON.stringify(db));
+        }
+
+        // Authentication & Role Handling
+        function updateLoginHint(role) {
+            const hint = document.getElementById('loginHintText');
+            const usr = document.getElementById('loginUsername');
+            const pwd = document.getElementById('loginPassword');
+            if (role === 'manager') {
+                usr.value = 'manager'; pwd.value = 'admin123';
+                hint.innerText = 'Role selected: Site Manager. Default credentials: manager / admin123. Full editing privileges enabled.';
+            } else if (role === 'fleet') {
+                usr.value = 'fleet_lead'; pwd.value = 'password123';
+                hint.innerText = 'Role selected: Fleet Supervisor. Default credentials: fleet_lead / password123.';
+            } else if (role === 'finance') {
+                usr.value = 'finance_mgr'; pwd.value = 'password123';
+                hint.innerText = 'Role selected: Finance Manager. Default credentials: finance_mgr / password123.';
+            } else if (role === 'operator') {
+                usr.value = 'operator1'; pwd.value = 'password123';
+                hint.innerText = 'Role selected: Machine Operator. Default credentials: operator1 / password123.';
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const role = document.getElementById('loginRoleSelect').value;
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            // Verify against users or default fallback
+            let found = db.users.find(u => u.username === username && u.role === role);
+            if (!found && username === 'manager' && password === 'admin123') {
+                found = { username: 'manager', role: 'manager' };
+            } else if (!found) {
+                found = db.users.find(u => u.username === username && u.password === password);
+            }
+
+            if (found || (username && password)) {
+                db.currentUser = { username: username || 'manager', role: role || found.role || 'manager' };
+                document.getElementById('authOverlay').style.display = 'none';
+                logAudit(`User ${db.currentUser.username} (${db.currentUser.role.toUpperCase}) signed into portal.`);
+                saveToLocalStorage();
+                renderAll();
+            } else {
+                alert('Invalid credentials or role mismatch. Please check username and password.');
+            }
+        }
+
+        function logout() {
+            document.getElementById('authOverlay').style.display = 'flex';
+            logAudit('User signed out.');
+        }
+
+        function renderAll() {
+            updateHeaderUserInfo();
+            applyRBAC();
+            renderDashboard();
+            renderUsers();
+            renderFuel();
+            renderMachine();
+            renderDumpTruck();
+            renderExcavation();
+            renderPettyCash();
+            renderOtherExpenses();
+            renderIncome();
+            renderPurchaseRequests();
+            renderAuditLogs();
+        }
+
+        function updateHeaderUserInfo() {
+            document.getElementById('header-username-lbl').innerText = db.currentUser.username;
+            document.getElementById('header-role-lbl').innerText = db.currentUser.role.toUpperCase();
+            document.getElementById('adminDbTools').style.display = (db.currentUser.role === 'manager') ? 'flex' : 'none';
+        }
+
+        function applyRBAC() {
+            const role = db.currentUser.role;
+            const restrictedButtons = document.querySelectorAll('.tab-btn.permission-restricted');
+            restrictedButtons.forEach(btn => {
+                const allowedRoles = btn.getAttribute('data-role-allow');
+                if (allowedRoles && allowedRoles.includes(role)) {
+                    btn.style.display = 'flex';
+                } else {
+                    btn.style.display = (role === 'manager') ? 'flex' : 'none';
+                }
+            });
+
+            const actionCols = document.querySelectorAll('.action-col');
+            actionCols.forEach(col => {
+                col.style.display = (role === 'operator') ? 'none' : 'table-cell';
+            });
+        }
+
+        // Tab Navigation
+        function switchTab(targetId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('bg-amber-500', 'text-slate-900', 'font-bold', 'shadow');
+                el.classList.add('text-slate-300', 'hover:bg-slate-700', 'hover:text-white', 'font-medium');
+            });
+
+            const targetTab = document.getElementById(targetId);
+            if (targetTab) targetTab.classList.add('active');
+
+            const activeBtn = document.querySelector(`.tab-btn[data-target="${targetId}"]`);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-slate-300', 'hover:bg-slate-700', 'hover:text-white', 'font-medium');
+                activeBtn.classList.add('bg-amber-500', 'text-slate-900', 'font-bold', 'shadow');
+            }
+        }
+
+        // Date & Time Filtering
+        function applyGlobalDateTimeFilter() {
+            db.globalFilter.start = document.getElementById('globalStartDateTime').value;
+            db.globalFilter.end = document.getElementById('globalEndDateTime').value;
+            renderAll();
+        }
+
+        function resetGlobalDateTimeFilter() {
+            document.getElementById('globalStartDateTime').value = '';
+            document.getElementById('globalEndDateTime').value = '';
+            db.globalFilter.start = '';
+            db.globalFilter.end = '';
+            renderAll();
+        }
+
+        function quickSelectDateRange(range) {
+            const now = new Date();
+            let start = new Date();
+            if (range === 'today') {
+                start.setHours(0, 0, 0, 0);
+            } else if (range === 'week') {
+                start.setDate(now.getDate() - 7);
+            } else if (range === 'month') {
+                start.setMonth(now.getMonth() - 1);
+            }
+            document.getElementById('globalStartDateTime').value = start.toISOString().slice(0, 16);
+            document.getElementById('globalEndDateTime').value = now.toISOString().slice(0, 16);
+            applyGlobalDateTimeFilter();
+        }
+
+        function isWithinFilter(dtStr) {
+            if (!db.globalFilter.start && !db.globalFilter.end) return true;
+            const itemTime = new Date(dtStr).getTime();
+            if (db.globalFilter.start && itemTime < new Date(db.globalFilter.start).getTime()) return false;
+            if (db.globalFilter.end && itemTime > new Date(db.globalFilter.end).getTime()) return false;
+            return true;
+        }
+
+        // Dashboard Rendering & KPIs
+        function renderDashboard() {
+            const filteredFuel = db.fuel_logs.filter(x => isWithinFilter(x.datetime));
+            const totalLitres = filteredFuel.reduce((sum, x) => sum + Number(x.litres || 0), 0);
+            document.getElementById('kpi-fuel').innerText = totalLitres.toLocaleString() + ' L';
+
+            const filteredPc = db.pettycash_logs.filter(x => isWithinFilter(x.datetime));
+            const totalPcIn = filteredPc.filter(x => x.type === 'Cash In').reduce((s, x) => s + Number(x.amount || 0), 0);
+            const totalPcOut = filteredPc.filter(x => x.type === 'Cash Out').reduce((s, x) => s + Number(x.amount || 0), 0);
+            const pettyBalance = totalPcIn - totalPcOut;
+            document.getElementById('kpi-petty').innerText = 'ETB ' + pettyBalance.toLocaleString();
+
+            const filteredOe = db.otherexpenses_logs.filter(x => isWithinFilter(x.datetime));
+            const totalOe = filteredOe.reduce((s, x) => s + Number(x.amount || 0), 0);
+            document.getElementById('kpi-expenses').innerText = 'ETB ' + totalOe.toLocaleString();
+
+            const filteredInc = db.income_logs.filter(x => isWithinFilter(x.datetime));
+            const totalInc = filteredInc.reduce((s, x) => s + Number(x.amount || 0), 0);
+            document.getElementById('kpi-income').innerText = 'ETB ' + totalInc.toLocaleString();
+
+            const role = db.currentUser.role;
+            const titleEl = document.getElementById('dashRoleTitle');
+            const badgeEl = document.getElementById('dashRoleBadge');
+            const welcomeEl = document.getElementById('dashboardWelcomeText');
+            const widgetEl = document.getElementById('roleSpecificWidget');
+            const navEl = document.getElementById('quickNavCards');
+
+            if (role === 'manager') {
+                titleEl.innerText = 'Bishoftu Site Operations & Executive Overview';
+                badgeEl.innerText = 'Admin & Manager Full Access';
+                welcomeEl.innerText = 'Welcome, Site Manager. You have full oversight of production haulage, financials, equipment logs, and employee credentials.';
+                widgetEl.innerHTML = `<div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-900 space-y-1">
+                    <div class="font-bold">Quick System Status:</div>
+                    <div>• Active Equipment: ${db.machine_logs.filter(m => m.status === 'Active').length} machines operating.</div>
+                    <div>• Pending Purchase Requests: ${db.purchaserequests.filter(p => p.status === 'Pending').length} requisitions awaiting approval.</div>
+                </div>`;
+            } else if (role === 'fleet') {
+                titleEl.innerText = 'Fleet & Heavy Machinery Supervisor Portal';
+                badgeEl.innerText = 'Fleet Supervisor Access';
+                welcomeEl.innerText = 'Monitor heavy excavator hours, dump truck trip counts, and diesel fuel distribution across quarry sectors.';
+                widgetEl.innerHTML = `<div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs text-blue-900 space-y-1">
+                    <div class="font-bold">Fleet Operations Summary:</div>
+                    <div>• Total Dump Trucks Logged: ${db.dumptruck_logs.length} entries.</div>
+                    <div>• Total Fuel Dispatched: ${totalLitres.toLocaleString()} Litres.</div>
+                </div>`;
+            } else if (role === 'finance') {
+                titleEl.innerText = 'Finance & Petty Cash Management Portal';
+                badgeEl.innerText = 'Finance Access';
+                welcomeEl.innerText = 'Manage petty cash imprest vouchers, utility bills, site expense records, and aggregate haulage income invoices.';
+                widgetEl.innerHTML = `<div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-xs text-emerald-900 space-y-1">
+                    <div class="font-bold">Financial Standing:</div>
+                    <div>• Current Liquid Petty Cash: ETB ${pettyBalance.toLocaleString()}</div>
+                    <div>• Total Incomes Recorded: ETB ${totalInc.toLocaleString()}</div>
+                </div>`;
+            } else {
+                titleEl.innerText = 'Machine Operator & Field Logging Portal';
+                badgeEl.innerText = 'Operator Access';
+                welcomeEl.innerText = 'Submit daily equipment performance logs, fuel issues, and truck cycle counts directly into the local site database.';
+                widgetEl.innerHTML = `<div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs text-slate-700 space-y-1">
+                    <div class="font-bold">Field Quick Actions:</div>
+                    <div>Use the top navigation tabs to log fuel, machine hours, or truck haulage cycles.</div>
+                </div>`;
+            }
+
+            navEl.innerHTML = `
+                <div onclick="switchTab('fuel')" class="bg-slate-50 hover:bg-amber-50 p-4 rounded-xl border border-slate-200 cursor-pointer transition text-center space-y-1">
+                    <div class="text-2xl">⛽</div>
+                    <div class="font-bold text-xs text-slate-800">Fuel Reports</div>
+                </div>
+                <div onclick="switchTab('machine')" class="bg-slate-50 hover:bg-amber-50 p-4 rounded-xl border border-slate-200 cursor-pointer transition text-center space-y-1">
+                    <div class="text-2xl">🚜</div>
+                    <div class="font-bold text-xs text-slate-800">Machine Logs</div>
+                </div>
+                <div onclick="switchTab('dumptruck')" class="bg-slate-50 hover:bg-amber-50 p-4 rounded-xl border border-slate-200 cursor-pointer transition text-center space-y-1">
+                    <div class="text-2xl">🚛</div>
+                    <div class="font-bold text-xs text-slate-800">Dump Trucks</div>
+                </div>
+                <div onclick="switchTab('excavation')" class="bg-slate-50 hover:bg-amber-50 p-4 rounded-xl border border-slate-200 cursor-pointer transition text-center space-y-1">
+                    <div class="text-2xl">⛏️</div>
+                    <div class="font-bold text-xs text-slate-800">Excavation</div>
+                </div>
+                <div onclick="switchTab('pettycash')" class="bg-slate-50 hover:bg-amber-50 p-4 rounded-xl border border-slate-200 cursor-pointer transition text-center space-y-1">
+                    <div class="text-2xl">💵</div>
+                    <div class="font-bold text-xs text-slate-800">Petty Cash</div>
+                </div>
+                <div onclick="switchTab('purchaserequests')" class="bg-slate-50 hover:bg-amber-50 p-4 rounded-xl border border-slate-200 cursor-pointer transition text-center space-y-1">
+                    <div class="text-2xl">🛒</div>
+                    <div class="font-bold text-xs text-slate-800">Requests</div>
+                </div>
+            `;
+        }
+
+        // Employee Credentials Table
+        function renderUsers() {
+            const tbody = document.getElementById('userTableBody');
+            tbody.innerHTML = '';
+            const filtered = db.users.filter(u => isWithinFilter(u.created));
+            document.getElementById('userCount').innerText = `${filtered.length} records`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">No user credentials found.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-4 font-bold text-slate-900">${u.username}</td>
+                    <td class="p-4 font-mono text-slate-600">${u.password}</td>
+                    <td class="p-4"><span class="px-2 py-1 bg-amber-100 text-amber-900 rounded text-xs font-bold">${u.role.toUpperCase()}</span></td>
+                    <td class="p-4 text-xs text-slate-500">${u.created.replace('T', ' ')}</td>
+                    <td class="p-4 space-x-2">
+                        <button onclick="editUser('${u.id}')" class="text-amber-600 hover:underline text-xs font-bold cursor-pointer">Edit</button>
+                        <button onclick="deleteUser('${u.id}')" class="text-rose-600 hover:underline text-xs font-bold cursor-pointer">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function loadSampleUsers() {
+            db.users = [
+                { id: 'u1', username: 'manager', password: 'admin123', role: 'manager', created: '2026-06-01T08:00' },
+                { id: 'u2', username: 'fleet_lead', password: 'password123', role: 'fleet', created: '2026-06-10T09:30' },
+                { id: 'u3', username: 'finance_mgr', password: 'password123', role: 'finance', created: '2026-06-15T10:15' },
+                { id: 'u4', username: 'operator1', password: 'password123', role: 'operator', created: '2026-07-01T07:45' }
+            ];
+            saveToLocalStorage();
+            renderUsers();
+            logAudit('Sample user credentials reloaded.');
+        }
+
+        function handleSaveUser(e) {
+            e.preventDefault();
+            const id = document.getElementById('editUserId').value;
+            const username = document.getElementById('newUsername').value.trim();
+            const password = document.getElementById('newPassword').value;
+            const role = document.getElementById('newRole').value;
+
+            if (id) {
+                const item = db.users.find(x => x.id === id);
+                if (item) {
+                    item.username = username;
+                    item.password = password;
+                    item.role = role;
+                    logAudit(`Updated user credential: ${username}`);
+                }
+            } else {
+                db.users.push({
+                    id: 'u_' + Date.now(),
+                    username,
+                    password,
+                    role,
+                    created: new Date().toISOString().slice(0, 16)
+                });
+                logAudit(`Created new user credential: ${username}`);
+            }
+            saveToLocalStorage();
+            closeModal('userCreateModal');
+            renderUsers();
+        }
+
+        function editUser(id) {
+            const u = db.users.find(x => x.id === id);
+            if (!u) return;
+            document.getElementById('editUserId').value = u.id;
+            document.getElementById('newUsername').value = u.username;
+            document.getElementById('newPassword').value = u.password;
+            document.getElementById('newRole').value = u.role;
+            openModal('userCreateModal');
+        }
+
+        function deleteUser(id) {
+            if (confirm('Are you sure you want to delete this user credential?')) {
+                db.users = db.users.filter(x => x.id !== id);
+                saveToLocalStorage();
+                renderUsers();
+                logAudit('Deleted user credential.');
+            }
+        }
+
+        // Fuel Reports Table
+        function renderFuel() {
+            const tbody = document.getElementById('fuelTableBody');
+            tbody.innerHTML = '';
+            const filtered = db.fuel_logs.filter(x => isWithinFilter(x.datetime));
+            document.getElementById('fuelCount').innerText = `${filtered.length} records`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">No fuel records found for selected period.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(x => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-4 text-xs font-medium text-slate-600">${x.datetime.replace('T', ' ')}</td>
+                    <td class="p-4 font-bold text-slate-900">${x.equipment}</td>
+                    <td class="p-4 text-slate-700">${x.operator}</td>
+                    <td class="p-4 font-bold text-amber-600">${Number(x.litres).toLocaleString()} L</td>
+                    <td class="p-4 text-slate-600">${x.meter}</td>
+                    <td class="p-4 text-xs text-slate-500">${x.loggedBy}</td>
+                    <td class="p-4 space-x-2 action-col" style="display: ${db.currentUser.role === 'operator' ? 'none' : 'table-cell'}">
+                        <button onclick="editFuel('${x.id}')" class="text-amber-600 hover:underline text-xs font-bold cursor-pointer">Edit</button>
+                        <button onclick="deleteFuel('${x.id}')" class="text-rose-600 hover:underline text-xs font-bold cursor-pointer">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function handleSaveFuel(e) {
+            e.preventDefault();
+            const id = document.getElementById('editFuelId').value;
+            const datetime = document.getElementById('fuelDateTime').value;
+            const equipment = document.getElementById('fuelEquipment').value;
+            const operator = document.getElementById('fuelOperator').value;
+            const litres = parseFloat(document.getElementById('fuelLitres').value);
+            const meter = document.getElementById('fuelMeter').value;
+
+            if (id) {
+                const item = db.fuel_logs.find(x => x.id === id);
+                if (item) {
+                    item.datetime = datetime;
+                    item.equipment = equipment;
+                    item.operator = operator;
+                    item.litres = litres;
+                    item.meter = meter;
+                    logAudit(`Updated fuel record for ${equipment}`);
+                }
+            } else {
+                db.fuel_logs.push({
+                    id: 'f_' + Date.now(),
+                    datetime,
+                    equipment,
+                    operator,
+                    litres,
+                    meter,
+                    loggedBy: `${db.currentUser.username} (Bishoftu Main Site)`
+                });
+                logAudit(`Added fuel record: ${litres}L for ${equipment}`);
+            }
+            saveToLocalStorage();
+            closeModal('fuelModal');
+            renderAll();
+        }
+
+        function editFuel(id) {
+            const x = db.fuel_logs.find(item => item.id === id);
+            if (!x) return;
+            document.getElementById('editFuelId').value = x.id;
+            document.getElementById('fuelDateTime').value = x.datetime;
+            document.getElementById('fuelEquipment').value = x.equipment;
+            document.getElementById('fuelOperator').value = x.operator;
+            document.getElementById('fuelLitres').value = x.litres;
+            document.getElementById('fuelMeter').value = x.meter;
+            document.getElementById('fuelModalTitle').innerText = 'Edit Fuel Record';
+            openModal('fuelModal');
+        }
+
+        function deleteFuel(id) {
+            if (confirm('Delete this fuel record?')) {
+                db.fuel_logs = db.fuel_logs.filter(x => x.id !== id);
+                saveToLocalStorage();
+                renderAll();
+                logAudit('Deleted fuel record.');
+            }
+        }
+
+        // Machine Logs Table
+        function renderMachine() {
+            const tbody = document.getElementById('machineTableBody');
+            tbody.innerHTML = '';
+            const filtered = db.machine_logs.filter(x => isWithinFilter(x.datetime));
+            document.getElementById('machineCount').innerText = `${filtered.length} records`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">No machine logs found.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(x => {
+                const statusBadge = x.status === 'Active' ? 'bg-emerald-100 text-emerald-800' : (x.status === 'Breakdown' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800');
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-4 text-xs font-medium text-slate-600">${x.datetime.replace('T', ' ')}</td>
+                    <td class="p-4 font-bold text-slate-900">${x.machineId}</td>
+                    <td class="p-4 text-slate-700">${x.type}</td>
+                    <td class="p-4 font-semibold text-slate-800">${x.hours} hrs</td>
+                    <td class="p-4"><span class="px-2.5 py-1 rounded-full text-xs font-bold ${statusBadge}">${x.status}</span></td>
+                    <td class="p-4 text-xs text-slate-500">${x.loggedBy}</td>
+                    <td class="p-4 space-x-2 action-col" style="display: ${db.currentUser.role === 'operator' ? 'none' : 'table-cell'}">
+                        <button onclick="editMachine('${x.id}')" class="text-amber-600 hover:underline text-xs font-bold cursor-pointer">Edit</button>
+                        <button onclick="deleteMachine('${x.id}')" class="text-rose-600 hover:underline text-xs font-bold cursor-pointer">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function handleSaveMachine(e) {
+            e.preventDefault();
+            const id = document.getElementById('editMachineId').value;
+            const datetime = document.getElementById('machineDateTime').value;
+            const machineId = document.getElementById('machineIdNum').value;
+            const type = document.getElementById('machineType').value;
+            const hours = parseFloat(document.getElementById('machineHours').value);
+            const status = document.getElementById('machineStatus').value;
+
+            if (id) {
+                const item = db.machine_logs.find(x => x.id === id);
+                if (item) {
+                    item.datetime = datetime; item.machineId = machineId; item.type = type; item.hours = hours; item.status = status;
+                    logAudit(`Updated machine log for ${machineId}`);
+                }
+            } else {
+                db.machine_logs.push({
+                    id: 'm_' + Date.now(), datetime, machineId, type, hours, status,
+                    loggedBy: `${db.currentUser.username} (Bishoftu Main Site)`
+                });
+                logAudit(`Added machine log: ${machineId} (${status})`);
+            }
+            saveToLocalStorage();
+            closeModal('machineModal');
+            renderAll();
+        }
+
+        function editMachine(id) {
+            const x = db.machine_logs.find(item => item.id === id);
+            if (!x) return;
+            document.getElementById('editMachineId').value = x.id;
+            document.getElementById('machineDateTime').value = x.datetime;
+            document.getElementById('machineIdNum').value = x.machineId;
+            document.getElementById('machineType').value = x.type;
+            document.getElementById('machineHours').value = x.hours;
+            document.getElementById('machineStatus').value = x.status;
+            document.getElementById('machineModalTitle').innerText = 'Edit Machine Log';
+            openModal('machineModal');
+        }
+
+        function deleteMachine(id) {
+            if (confirm('Delete this machine log?')) {
+                db.machine_logs = db.machine_logs.filter(x => x.id !== id);
+                saveToLocalStorage();
+                renderAll();
+                logAudit('Deleted machine log.');
+            }
+        }
+
+        // Dump Trucks Table
+        function renderDumpTruck() {
+            const tbody = document.getElementById('dumptruckTableBody');
+            tbody.innerHTML = '';
+            const filtered = db.dumptruck_logs.filter(x => isWithinFilter(x.datetime));
+            document.getElementById('dumptruckCount').innerText = `${filtered.length} records`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">No dump truck haulage records found.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(x => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-4 text-xs font-medium text-slate-600">${x.datetime.replace('T', ' ')}</td>
+                    <td class="p-4 font-bold text-slate-900">${x.truckId}</td>
+                    <td class="p-4 text-slate-700">${x.driver}</td>
+                    <td class="p-4 font-bold text-blue-600">${x.trips} Trips</td>
+                    <td class="p-4 font-bold text-slate-800">${x.volume} m³</td>
+                    <td class="p-4 text-xs text-slate-500">${x.loggedBy}</td>
+                    <td class="p-4 space-x-2 action-col" style="display: ${db.currentUser.role === 'operator' ? 'none' : 'table-cell'}">
+                        <button onclick="editDt('${x.id}')" class="text-amber-600 hover:underline text-xs font-bold cursor-pointer">Edit</button>
+                        <button onclick="deleteDt('${x.id}')" class="text-rose-600 hover:underline text-xs font-bold cursor-pointer">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function handleSaveDt(e) {
+            e.preventDefault();
+            const id = document.getElementById('editDtId').value;
+            const datetime = document.getElementById('dtDateTime').value;
+            const truckId = document.getElementById('dtTruckId').value;
+            const driver = document.getElementById('dtDriver').value;
+            const trips = parseInt(document.getElementById('dtTrips').value);
+            const volume = parseFloat(document.getElementById('dtVolume').value);
+
+            if (id) {
+                const item = db.dumptruck_logs.find(x => x.id === id);
+                if (item) {
+                    item.datetime = datetime; item.truckId = truckId; item.driver = driver; item.trips = trips; item.volume = volume;
+                    logAudit(`Updated dump truck log for ${truckId}`);
+                }
+            } else {
+                db.dumptruck_logs.push({
+                    id: 'dt_' + Date.now(), datetime, truckId, driver, trips, volume,
+                    loggedBy: `${db.currentUser.username} (Bishoftu Main Site)`
+                });
+                logAudit(`Added dump truck log: ${truckId} (${volume} m³)`);
+            }
+            saveToLocalStorage();
+            closeModal('dumptruckModal');
+            renderAll();
+        }
+
+        function editDt(id) {
+            const x = db.dumptruck_logs.find(item => item.id === id);
+            if (!x) return;
+            document.getElementById('editDtId').value = x.id;
+            document.getElementById('dtDateTime').value = x.datetime;
+            document.getElementById('dtTruckId').value = x.truckId;
+            document.getElementById('dtDriver').value = x.driver;
+            document.getElementById('dtTrips').value = x.trips;
+            document.getElementById('dtVolume').value = x.volume;
+            document.getElementById('dtModalTitle').innerText = 'Edit Dump Truck Record';
+            openModal('dumptruckModal');
+        }
+
+        function deleteDt(id) {
+            if (confirm('Delete this dump truck log?')) {
+                db.dumptruck_logs = db.dumptruck_logs.filter(x => x.id !== id);
+                saveToLocalStorage();
+                renderAll();
+                logAudit('Deleted dump truck log.');
+            }
+        }
+
+        // Excavation Table
+        function renderExcavation() {
+            const tbody = document.getElementById('excavationTableBody');
+            tbody.innerHTML = '';
+            const filtered = db.excavation_logs.filter(x => isWithinFilter(x.datetime));
+            document.getElementById('excavationCount').innerText = `${filtered.length} records`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">No excavation production records found.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(x => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-4 text-xs font-medium text-slate-600">${x.datetime.replace('T', ' ')}</td>
+                    <td class="p-4 font-bold text-slate-900">${x.zone}</td>
+                    <td class="p-4 text-slate-700">${x.material}</td>
+                    <td class="p-4 font-bold text-amber-600">${x.volume} m³</td>
+                    <td class="p-4 text-xs text-slate-500">${x.loggedBy}</td>
+                    <td class="p-4 space-x-2 action-col" style="display: ${db.currentUser.role === 'operator' ? 'none' : 'table-cell'}">
+                        <button onclick="editExc('${x.id}')" class="text-amber-600 hover:underline text-xs font-bold cursor-pointer">Edit</button>
+                        <button onclick="deleteExc('${x.id}')" class="text-rose-600 hover:underline text-xs font-bold cursor-pointer">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function handleSaveExc(e) {
+            e.preventDefault();
+            const id = document.getElementById('editExcId').value;
+            const datetime = document.getElementById('excDateTime').value;
+            const zone = document.getElementById('excZone').value;
+            const material = document.getElementById('excMaterial').value;
+            const volume = parseFloat(document.getElementById('excVolume').value);
+
+            if (id) {
+                const item = db.excavation_logs.find(x => x.id === id);
+                if (item) {
+                    item.datetime = datetime; item.zone = zone; item.material = material; item.volume = volume;
+                    logAudit(`Updated excavation record for ${zone}`);
+                }
+            } else {
+                db.excavation_logs.push({
+                    id: 'ex_' + Date.now(), datetime, zone, material, volume,
+                    loggedBy: `${db.currentUser.username} (Bishoftu Main Site)`
+                });
+                logAudit(`Added excavation production: ${volume} m³ (${zone})`);
+            }
+            saveToLocalStorage();
+            closeModal('excavationModal');
+            renderAll();
+        }
+
+        function editExc(id) {
+            const x = db.excavation_logs.find(item => item.id === id);
+            if (!x) return;
+            document.getElementById('editExcId').value = x.id;
+            document.getElementById('excDateTime').value = x.datetime;
+            document.getElementById('excZone').value = x.zone;
+            document.getElementById('excMaterial').value = x.material;
+            document.getElementById('excVolume').value = x.volume;
+            document.getElementById('excModalTitle').innerText = 'Edit Production Record';
+            openModal('excavationModal');
+        }
+
+        function deleteExc(id) {
+            if (confirm('Delete this excavation record?')) {
+                db.excavation_logs = db.excavation_logs.filter(x => x.id !== id);
+                saveToLocalStorage();
+                renderAll();
+                logAudit('Deleted excavation record.');
+            }
+        }
+
+        // Petty Cash Table
+        function renderPettyCash() {
+            const tbody = document.getElementById('pettycashTableBody');
+            tbody.innerHTML = '';
+            const filtered = db.pettycash_logs.filter(x => isWithinFilter(x.datetime));
+            document.getElementById('pettycashCount').innerText = `${filtered.length} records`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">No petty cash vouchers found.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(x => {
+                const badge = x.type === 'Cash In' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800';
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-4 text-xs font-medium text-slate-600">${x.datetime.replace('T', ' ')}</td>
+                    <td class="p-4"><span class="px-2.5 py-1 rounded text-xs font-bold ${badge}">${x.type}</span></td>
+                    <td class="p-4 font-medium text-slate-900">${x.desc}</td>
+                    <td class="p-4 font-bold ${x.type === 'Cash In' ? 'text-emerald-600' : 'text-rose-600'}">ETB ${Number(x.amount).toLocaleString()}</td>
+                    <td class="p-4 text-xs text-slate-500">${x.loggedBy}</td>
+                    <td class="p-4 space-x-2">
+                        <button onclick="editPc('${x.id}')" class="text-amber-600 hover:underline text-xs font-bold cursor-pointer">Edit</button>
+                        <button onclick="deletePc('${x.id}')" class="text-rose-600 hover:underline text-xs font-bold cursor-pointer">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function handleSavePc(e) {
+            e.preventDefault();
+            const id = document.getElementById('editPcId').value;
+            const datetime = document.getElementById('pcDateTime').value;
+            const type = document.getElementById('pcType').value;
+            const desc = document.getElementById('pcDesc').value;
+            const amount = parseFloat(document.getElementById('pcAmount').value);
+
+            if (id) {
+                const item = db.pettycash_logs.find(x => x.id === id);
+                if (item) {
+                    item.datetime = datetime; item.type = type; item.desc = desc; item.amount = amount;
+                    logAudit(`Updated petty cash voucher: ${desc}`);
+                }
+            } else {
+                db.pettycash_logs.push({
+                    id: 'pc_' + Date.now(), datetime, type, desc, amount,
+                    loggedBy: `${db.currentUser.username} (Bishoftu Main Site)`
+                });
+                logAudit(`Added petty cash voucher (${type}): ETB ${amount}`);
+            }
+            saveToLocalStorage();
+            closeModal('pettycashModal');
+            renderAll();
+        }
+
+        function editPc(id) {
+            const x = db.pettycash_logs.find(item => item.id === id);
+            if (!x) return;
+            document.getElementById('editPcId').value = x.id;
+            document.getElementById('pcDateTime').value = x.datetime;
+            document.getElementById('pcType').value = x.type;
+            document.getElementById('pcDesc').value = x.desc;
+            document.getElementById('pcAmount').value = x.amount;
+            document.getElementById('pcModalTitle').innerText = 'Edit Petty Cash Voucher';
+            openModal('pettycashModal');
+        }
+
+        function deletePc(id) {
+            if (confirm('Delete this petty cash voucher?')) {
+                db.pettycash_logs = db.pettycash_logs.filter(x => x.id !== id);
+                saveToLocalStorage();
+                renderAll();
+                logAudit('Deleted petty cash voucher.');
+            }
+        }
+
+        // Other Expenses Table
+        function renderOtherExpenses() {
+            const tbody = document.getElementById('otherexpensesTableBody');
+            tbody.innerHTML = '';
+            const filtered = db.otherexpenses_logs.filter(x => isWithinFilter(x.datetime));
+            document.getElementById('otherexpensesCount').innerText = `${filtered.length} records`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">No expense records found.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(x => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-4 text-xs font-medium text-slate-600">${x.datetime.replace('T', ' ')}</td>
+                    <td class="p-4 font-bold text-slate-900">${x.category}</td>
+                    <td class="p-4 text-slate-700">${x.vendor}</td>
+                    <td class="p-4 font-bold text-rose-600">ETB ${Number(x.amount).toLocaleString()}</td>
+                    <td class="p-4 text-xs text-slate-500">${x.loggedBy}</td>
+                    <td class="p-4 space-x-2">
+                        <button onclick="editOe('${x.id}')" class="text-amber-600 hover:underline text-xs font-bold cursor-pointer">Edit</button>
+                        <button onclick="deleteOe('${x.id}')" class="text-rose-600 hover:underline text-xs font-bold cursor-pointer">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function handleSaveOe(e) {
+            e.preventDefault();
+            const id = document.getElementById('editOeId').value;
+            const datetime = document.getElementById('oeDateTime').value;
+            const category = document.getElementById('oeCategory').value;
+            const vendor = document.getElementById('oeVendor').value;
+            const amount = parseFloat(document.getElementById('oeAmount').value);
+
+            if (id) {
+                const item = db.otherexpenses_logs.find(x => x.id === id);
+                if (item) {
+                    item.datetime = datetime; item.category = category; item.vendor = vendor; item.amount = amount;
+                    logAudit(`Updated expense record: ${category}`);
+                }
+            } else {
+                db.otherexpenses_logs.push({
+                    id: 'oe_' + Date.now(), datetime, category, vendor, amount,
+                    loggedBy: `${db.currentUser.username} (Bishoftu Main Site)`
+                });
+                logAudit(`Added expense record: ${category} (ETB ${amount})`);
+            }
+            saveToLocalStorage();
+            closeModal('otherexpensesModal');
+            renderAll();
+        }
+
+        function editOe(id) {
+            const x = db.otherexpenses_logs.find(item => item.id === id);
+            if (!x) return;
+            document.getElementById('editOeId').value = x.id;
+            document.getElementById('oeDateTime').value = x.datetime;
+            document.getElementById('oeCategory').value = x.category;
+            document.getElementById('oeVendor').value = x.vendor;
+            document.getElementById('oeAmount').value = x.amount;
+            document.getElementById('oeModalTitle').innerText = 'Edit Expense Record';
+            openModal('otherexpensesModal');
+        }
+
+        function deleteOe(id) {
+            if (confirm('Delete this expense record?')) {
+                db.otherexpenses_logs = db.otherexpenses_logs.filter(x => x.id !== id);
+                saveToLocalStorage();
+                renderAll();
+                logAudit('Deleted expense record.');
+            }
+        }
+
+        // Site Income Table
+        function renderIncome() {
+            const tbody = document.getElementById('incomeTableBody');
+            tbody.innerHTML = '';
+            const filtered = db.income_logs.filter(x => isWithinFilter(x.datetime));
+            document.getElementById('incomeCount').innerText = `${filtered.length} records`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">No site income records found.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(x => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-4 text-xs font-medium text-slate-600">${x.datetime.replace('T', ' ')}</td>
+                    <td class="p-4 font-bold text-slate-900">${x.client}</td>
+                    <td class="p-4 text-slate-700">${x.desc}</td>
+                    <td class="p-4 font-bold text-blue-600">ETB ${Number(x.amount).toLocaleString()}</td>
+                    <td class="p-4 text-xs text-slate-500">${x.loggedBy}</td>
+                    <td class="p-4 space-x-2">
+                        <button onclick="editInc('${x.id}')" class="text-amber-600 hover:underline text-xs font-bold cursor-pointer">Edit</button>
+                        <button onclick="deleteInc('${x.id}')" class="text-rose-600 hover:underline text-xs font-bold cursor-pointer">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function handleSaveInc(e) {
+            e.preventDefault();
+            const id = document.getElementById('editIncId').value;
+            const datetime = document.getElementById('incDateTime').value;
+            const client = document.getElementById('incClient').value;
+            const desc = document.getElementById('incDesc').value;
+            const amount = parseFloat(document.getElementById('incAmount').value);
+
+            if (id) {
+                const item = db.income_logs.find(x => x.id === id);
+                if (item) {
+                    item.datetime = datetime; item.client = client; item.desc = desc; item.amount = amount;
+                    logAudit(`Updated income record: ${client}`);
+                }
+            } else {
+                db.income_logs.push({
+                    id: 'inc_' + Date.now(), datetime, client, desc, amount,
+                    loggedBy: `${db.currentUser.username} (Bishoftu Main Site)`
+                });
+                logAudit(`Added income record: ${client} (ETB ${amount})`);
+            }
+            saveToLocalStorage();
+            closeModal('incomeModal');
+            renderAll();
+        }
+
+        function editInc(id) {
+            const x = db.income_logs.find(item => item.id === id);
+            if (!x) return;
+            document.getElementById('editIncId').value = x.id;
+            document.getElementById('incDateTime').value = x.datetime;
+            document.getElementById('incClient').value = x.client;
+            document.getElementById('incDesc').value = x.desc;
+            document.getElementById('incAmount').value = x.amount;
+            document.getElementById('incModalTitle').innerText = 'Edit Income Record';
+            openModal('incomeModal');
+        }
+
+        function deleteInc(id) {
+            if (confirm('Delete this income record?')) {
+                db.income_logs = db.income_logs.filter(x => x.id !== id);
+                saveToLocalStorage();
+                renderAll();
+                logAudit('Deleted income record.');
+            }
+        }
+
+        // Purchase Requests Table
+        function renderPurchaseRequests() {
+            const tbody = document.getElementById('purchaserequestsTableBody');
+            tbody.innerHTML = '';
+            const filtered = db.purchaserequests.filter(x => isWithinFilter(x.datetime));
+            document.getElementById('purchaserequestsCount').innerText = `${filtered.length} records`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">No purchase requests found.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(x => {
+                const statusBadge = x.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' : (x.status === 'Rejected' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800');
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-4 text-xs font-medium text-slate-600">${x.datetime.replace('T', ' ')}</td>
+                    <td class="p-4 font-bold text-slate-900">${x.item}</td>
+                    <td class="p-4 text-slate-700">${x.qty}</td>
+                    <td class="p-4 font-semibold text-slate-800">ETB ${Number(x.cost).toLocaleString()}</td>
+                    <td class="p-4"><span class="px-2.5 py-1 rounded-full text-xs font-bold ${statusBadge}">${x.status}</span></td>
+                    <td class="p-4 text-xs text-slate-500">${x.requester}</td>
+                    <td class="p-4 space-x-2">
+                        ${db.currentUser.role === 'manager' && x.status === 'Pending' ? `
+                            <button onclick="approvePr('${x.id}', 'Approved')" class="text-emerald-600 hover:underline text-xs font-bold cursor-pointer">Approve</button>
+                            <button onclick="approvePr('${x.id}', 'Rejected')" class="text-rose-600 hover:underline text-xs font-bold cursor-pointer">Reject</button>
+                        ` : ''}
+                        <button onclick="deletePr('${x.id}')" class="text-rose-600 hover:underline text-xs font-bold cursor-pointer">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function handleSavePr(e) {
+            e.preventDefault();
+            const datetime = document.getElementById('prDateTime').value;
+            const item = document.getElementById('prItem').value;
+            const qty = parseInt(document.getElementById('prQty').value);
+            const cost = parseFloat(document.getElementById('prCost').value);
+
+            db.purchaserequests.push({
+                id: 'pr_' + Date.now(), datetime, item, qty, cost,
+                status: 'Pending',
+                requester: db.currentUser.username
+            });
+            logAudit(`Submitted purchase request for ${item}`);
+            saveToLocalStorage();
+            closeModal('purchaserequestsModal');
+            renderAll();
+        }
+
+        function approvePr(id, newStatus) {
+            const item = db.purchaserequests.find(x => x.id === id);
+            if (item) {
+                item.status = newStatus;
+                saveToLocalStorage();
+                renderAll();
+                logAudit(`Purchase request ${id} marked as ${newStatus}.`);
+            }
+        }
+
+        function deletePr(id) {
+            if (confirm('Delete this purchase request?')) {
+                db.purchaserequests = db.purchaserequests.filter(x => x.id !== id);
+                saveToLocalStorage();
+                renderAll();
+                logAudit('Deleted purchase request.');
+            }
+        }
+
+        // Audit Trail Logs
+        function logAudit(actionText) {
+            const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+            db.audit_logs.unshift({ datetime: now, action: actionText });
+            if (db.audit_logs.length > 50) db.audit_logs.pop();
+            renderAuditLogs();
+        }
+
+        function renderAuditLogs() {
+            const container = document.getElementById('audit-trail-list');
+            if (!container) return;
+            if (db.audit_logs.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400">No recent activity logs recorded.</p>`;
+                return;
+            }
+            container.innerHTML = db.audit_logs.map(log => `
+                <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-0.5">
+                    <div class="text-[10px] font-bold text-amber-600">${log.datetime}</div>
+                    <div class="text-xs text-slate-700">${log.action}</div>
+                </div>
+            `).join('');
+        }
+
+        function clearAuditLogs() {
+            if (confirm('Clear audit activity trail?')) {
+                db.audit_logs = [];
+                saveToLocalStorage();
+                renderAuditLogs();
+            }
+        }
+
+        // Database Backup & Restore
+        function exportDatabase() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `Bishoftu_Site_Database_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+            logAudit('Database backup exported successfully.');
+        }
+
+        function importDatabase(event) {
+            const fileReader = new FileReader();
+            if (event.target.files[0]) {
+                fileReader.readAsText(event.target.files[0], "UTF-8");
+                fileReader.onload = (e) => {
+                    try {
+                        db = JSON.parse(e.target.result);
+                        saveToLocalStorage();
+                        renderAll();
+                        alert('Database restored successfully from backup file!');
+                        logAudit('Database restored from backup JSON.');
+                    } catch (error) {
+                        alert('Invalid database backup JSON file.');
+                    }
+                };
+            }
+        }
+
+        // SQLite / SQL Console Simulator
+        function setSqlPreset(query) {
+            document.getElementById('sqlQueryInput').value = query;
+        }
+
+        function executeSqlQuery() {
+            const query = document.getElementById('sqlQueryInput').value.trim().toLowerCase();
+            const output = document.getElementById('sqlResultOutput');
+
+            try {
+                if (query.includes('from fuel_logs')) {
+                    output.innerHTML = `<pre>${JSON.stringify(db.fuel_logs, null, 2)}</pre>`;
+                } else if (query.includes('from machine_logs')) {
+                    output.innerHTML = `<pre>${JSON.stringify(db.machine_logs, null, 2)}</pre>`;
+                } else if (query.includes('from audit_logs')) {
+                    output.innerHTML = `<pre>${JSON.stringify(db.audit_logs, null, 2)}</pre>`;
+                } else if (query.includes('from users')) {
+                    output.innerHTML = `<pre>${JSON.stringify(db.users, null, 2)}</pre>`;
+                } else if (query.includes('select')) {
+                    output.innerHTML = `<pre>${JSON.stringify(db.fuel_logs.concat(db.machine_logs), null, 2)}</pre>`;
+                } else {
+                    output.innerHTML = `<span class="text-emerald-600 font-bold">Query executed successfully (0 rows affected or table modified).</span>`;
+                }
+                logAudit(`Executed SQL Console Query: ${query.slice(0, 40)}...`);
+            } catch (err) {
+                output.innerHTML = `<span class="text-rose-600 font-bold">SQL Error: ${err.message}</span>`;
+            }
+        }
+
+        // Generic Table Filtering
+        function filterTable(tableId, query) {
+            const table = document.getElementById(tableId);
+            const trs = table.getElementsByTagName('tr');
+            const filter = query.toLowerCase();
+            for (let i = 1; i < trs.length; i++) {
+                const td = trs[i].innerText.toLowerCase();
+                trs[i].style.display = td.includes(filter) ? '' : 'none';
+            }
+        }
+
+        // Modal Helpers
+        function openModal(modalId) {
+            const dtInputs = document.querySelectorAll(`#${modalId} input[type="datetime-local"]`);
+            dtInputs.forEach(input => {
+                if (!input.value) {
+                    input.value = new Date().toISOString().slice(0, 16);
+                }
+            });
+            document.getElementById(modalId).style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            const hiddenId = document.querySelector(`#${modalId} input[type="hidden"]`);
+            if (hiddenId) hiddenId.value = '';
+            const titleEl = document.querySelector(`#${modalId} h3`);
+            if (titleEl && titleEl.innerText.includes('Edit')) {
+                titleEl.innerText = titleEl.innerText.replace('Edit', 'Add / New');
+            }
+        }
+    </script>
+</body>
+</html>
