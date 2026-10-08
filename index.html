@@ -1,1 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bishoftu Site & Fleet Management System</title>
+    <!-- Bulletproof Console Warning Suppressor for Tailwind Play CDN -->
+    <script>
+        (function() {
+            const originalWarn = console.warn;
+            console.warn = function(...args) {
+                const msg = args.join(' ');
+                if (msg.includes('cdn.tailwindcss.com') || msg.includes('production')) {
+                    return; // Suppress the warning entirely
+                }
+                originalWarn.apply(console, args);
+            };
+        })();
+    </script>
+    <!-- Tailwind CSS Play CDN for standalone execution -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.2s ease-out forwards;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans min-h-screen flex flex-col text-slate-800">
 
+    <div id="authOverlay" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-200 space-y-6 animate-fade-in">
+            <div class="text-center space-y-2">
+                <div class="w-16 h-16 bg-amber-500 rounded-2xl mx-auto flex items-center justify-center text-slate-900 font-black text-2xl shadow-lg">BF</div>
+                <h1 class="text-2xl font-black text-slate-900">Bishoftu Portal</h1>
+                <p class="text-sm text-slate-500">Site Operations & Fleet Management System (Offline Ready)</p>
+            </div>
+            
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Select Role / Profile</label>
+                    <select id="loginRoleSelect" onchange="updateLoginHint(this.value)" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none cursor-pointer">
+                        <option value="manager">Site Manager (Admin / Full Access & Editing)</option>
+                        <option value="fleet">Fleet Supervisor</option>
+                        <option value="finance">Finance & Petty Cash Manager</option>
+                        <option value="operator">Machine Operator</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Username</label>
+                    <input type="text" id="loginUsername" required placeholder="Enter username (e.g., manager)" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none" value="manager">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Password</label>
+                    <input type="password" id="loginPassword" required placeholder="Enter password (e.g., admin123)" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none" value="admin123">
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800" id="loginHintText">
+                    Role selected: Site Manager. Default credentials: manager / admin123. Full editing privileges enabled.
+                </div>
+                <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-xl text-sm shadow-md transition cursor-pointer">
+                    Sign In to Portal
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <header class="bg-slate-900 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center font-black text-slate-900 text-lg">BF</div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">Bishoftu Site & Fleet Management</h1>
+                    <p class="text-xs text-slate-400">Local Operational Database & Location Trace (100% Offline Capable)</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3 flex-wrap">
+                <div class="text-right hidden sm:block">
+                    <div id="header-username-lbl" class="text-xs font-bold text-amber-400">manager</div>
+                    <div id="header-role-lbl" class="text-[10px] text-slate-400 uppercase">ADMIN / MANAGER</div>
+                    <div id="header-location-lbl" class="text-[9px] text-emerald-400">Location: Bishoftu Main Site</div>
+                </div>
+                <div id="adminDbTools" class="flex items-center gap-2">
+                    <button onclick="exportDatabase()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 transition cursor-pointer">Backup DB</button>
+                    <label class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 cursor-pointer transition">
+                        Restore DB <input type="file" id="restoreFile" onchange="importDatabase(event)" class="hidden" accept=".json">
+                    </label>
+                </div>
+                <button onclick="logout()" class="bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-rose-600/30 transition cursor-pointer">Sign Out</button>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 border-t border-slate-700">
+            <div class="max-w-7xl mx-auto px-4 flex overflow-x-auto no-scrollbar space-x-1 py-2">
+                <button onclick="switchTab('dashboard')" data-target="dashboard" class="tab-btn bg-amber-500 text-slate-900 font-bold px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap shadow cursor-pointer">📊 Dashboard</button>
+                <button onclick="switchTab('users')" data-target="users" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager">🔑 Employee Credentials</button>
+                <button onclick="switchTab('fuel')" data-target="fuel" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager,fleet,operator">⛽ Fuel Reports</button>
+                <button onclick="switchTab('machine')" data-target="machine" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager,fleet,operator">🚜 Machine Logs</button>
+                <button onclick="switchTab('dumptruck')" data-target="dumptruck" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager,fleet,operator">🚛 Dump Trucks</button>
+                <button onclick="switchTab('excavation')" data-target="excavation" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager,fleet,operator">⛏️ Excavation & Prod</button>
+                <button onclick="switchTab('pettycash')" data-target="pettycash" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager,finance">💵 Petty Cash</button>
+                <button onclick="switchTab('otherexpenses')" data-target="otherexpenses" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager,finance">🧾 Other Expenses</button>
+                <button onclick="switchTab('income')" data-target="income" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager,finance">💰 Site Income</button>
+                <button onclick="switchTab('purchaserequests')" data-target="purchaserequests" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager,fleet,finance,operator">🛒 Purchase Requests</button>
+                <button onclick="switchTab('roles')" data-target="roles" class="tab-btn text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer">🛡️ Roles & RBAC</button>
+                <button onclick="switchTab('sql')" data-target="sql" class="tab-btn permission-restricted text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap cursor-pointer" data-role-allow="manager">💻 Database Console</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="bg-white border-b border-slate-200 shadow-xs py-3 px-4">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    ⏱️ Global Date & Time Filter:
+                </span>
+                <span class="text-xs text-slate-500 hidden md:inline">Filters all reports & KPIs dynamically</span>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+                    <label class="text-[11px] font-bold text-slate-600 uppercase">From:</label>
+                    <input type="datetime-local" id="globalStartDateTime" onchange="applyGlobalDateTimeFilter()" class="bg-transparent text-xs font-medium text-slate-800 focus:outline-none">
+                </div>
+                
+                <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+                    <label class="text-[11px] font-bold text-slate-600 uppercase">To:</label>
+                    <input type="datetime-local" id="globalEndDateTime" onchange="applyGlobalDateTimeFilter()" class="bg-transparent text-xs font-medium text-slate-800 focus:outline-none">
+                </div>
+
+                <div class="flex items-center gap-1.5">
+                    <button onclick="quickSelectDateRange('today')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-amber-100 hover:text-amber-900 text-slate-700 rounded-lg text-xs font-semibold transition cursor-pointer">Today</button>
+                    <button onclick="quickSelectDateRange('week')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-amber-100 hover:text-amber-900 text-slate-700 rounded-lg text-xs font-semibold transition cursor-pointer">This Week</button>
+                    <button onclick="quickSelectDateRange('month')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-amber-100 hover:text-amber-900 text-slate-700 rounded-lg text-xs font-semibold transition cursor-pointer">This Month</button>
+                    <button onclick="resetGlobalDateTimeFilter()" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition cursor-pointer">Clear All</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
+
+        <!-- DASHBOARD TAB -->
+        <div id="dashboard" class="tab-content active space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Fuel Issued</div>
+                    <div class="text-3xl font-black text-slate-900 mt-2" id="kpi-fuel">0 L</div>
+                    <div class="text-xs text-emerald-600 font-semibold mt-2">Active machinery tracking</div>
+                </div>
+                <div id="kpi-card-petty" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Petty Cash Balance</div>
+                    <div class="text-3xl font-black text-emerald-600 mt-2" id="kpi-petty">ETB 0</div>
+                    <div class="text-xs text-slate-500 font-semibold mt-2">Current liquid funds</div>
+                </div>
+                <div id="kpi-card-expenses" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Other Expenses</div>
+                    <div class="text-3xl font-black text-rose-600 mt-2" id="kpi-expenses">ETB 0</div>
+                    <div class="text-xs text-slate-500 font-semibold mt-2">Site operational overheads</div>
+                </div>
+                <div id="kpi-card-income" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Site Income</div>
+                    <div class="text-3xl font-black text-blue-600 mt-2" id="kpi-income">ETB 0</div>
+                    <div class="text-xs text-slate-500 font-semibold mt-2">Haulage & aggregate sales</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h2 class="font-bold text-lg text-slate-900" id="dashRoleTitle">Bishoftu Site Operations Overview</h2>
+                        <span id="dashRoleBadge" class="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full">Admin & Manager Full Access</span>
+                    </div>
+                    <p id="dashboardWelcomeText" class="text-sm text-slate-600">Welcome to the Bishoftu Site & Fleet Management Portal. As an administrator or manager, you hold full editing, approval, and record management privileges across all site tabs.</p>
+                    
+                    <div id="roleSpecificWidget" class="pt-2"></div>
+                    <div id="quickNavCards" class="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4"></div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h2 class="font-bold text-lg text-slate-900">Live Activity & Location Logs</h2>
+                        <button onclick="clearAuditLogs()" class="text-xs text-rose-600 hover:underline cursor-pointer">Clear Logs</button>
+                    </div>
+                    <div id="audit-trail-list" class="space-y-3 max-h-[350px] overflow-auto pr-1">
+                        <p class="text-xs text-slate-400">No recent activity logs recorded.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EMPLOYEE CREDENTIALS TAB -->
+        <div id="users" class="tab-content space-y-6">
+            <div id="userTabContainer" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Employee Login Credentials & Role Management</h2>
+                    <p class="text-sm text-slate-500">Create new usernames, set passwords, and manage security access levels for site staff.</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="openModal('userCreateModal')" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition flex items-center gap-2 shadow-sm cursor-pointer">
+                        + Add New User & Role
+                    </button>
+                    <button onclick="loadSampleUsers()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm transition font-medium cursor-pointer">Load Defaults</button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex justify-between items-center">
+                    <input type="text" placeholder="Search username or role..." onkeyup="filterTable('userTable', this.value)" class="px-4 py-2 text-sm border border-slate-200 rounded-xl w-72 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <span id="userCount" class="text-xs text-slate-500 font-medium">0 records</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="userTable" class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                                <th class="p-4">Username</th>
+                                <th class="p-4">Password</th>
+                                <th class="p-4">Assigned Role</th>
+                                <th class="p-4">Created Date & Time</th>
+                                <th class="p-4">Actions (Full Admin Edit)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- FUEL REPORTS TAB -->
+        <div id="fuel" class="tab-content space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Fuel Issued & Consumption Log</h2>
+                    <p class="text-sm text-slate-500">Monitor diesel and lubricant issues for excavation equipment and dump trucks.</p>
+                </div>
+                <button id="addFuelBtn" onclick="openModal('fuelModal')" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm cursor-pointer">
+                    + Add Fuel Record
+                </button>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
+                    <input type="text" placeholder="Search equipment or operator..." onkeyup="filterTable('fuelTable', this.value)" class="px-4 py-2 text-sm border border-slate-200 rounded-xl w-72 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <div class="text-xs font-medium text-slate-500">Filtered by active Date & Time range</div>
+                    <span id="fuelCount" class="text-xs text-slate-500 font-medium">0 records</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="fuelTable" class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                                <th class="p-4">Date & Time ↕</th>
+                                <th class="p-4">Equipment ID</th>
+                                <th class="p-4">Operator</th>
+                                <th class="p-4">Litres (L)</th>
+                                <th class="p-4">Meter / Hours</th>
+                                <th class="p-4">Logged By & Location</th>
+                                <th class="p-4 action-col">Actions (Edit / Delete)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fuelTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- MACHINE LOGS TAB -->
+        <div id="machine" class="tab-content space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Machine & Heavy Equipment Performance Logs</h2>
+                    <p class="text-sm text-slate-500">Track operating hours, maintenance status, and breakdowns for site excavators and graders.</p>
+                </div>
+                <button id="addMachineBtn" onclick="openModal('machineModal')" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm cursor-pointer">
+                    + Add Machine Log
+                </button>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
+                    <input type="text" placeholder="Search machine or status..." onkeyup="filterTable('machineTable', this.value)" class="px-4 py-2 text-sm border border-slate-200 rounded-xl w-72 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <div class="text-xs font-medium text-slate-500">Filtered by active Date & Time range</div>
+                    <span id="machineCount" class="text-xs text-slate-500 font-medium">0 records</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="machineTable" class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                                <th class="p-4">Date & Time ↕</th>
+                                <th class="p-4">Machine ID</th>
+                                <th class="p-4">Type</th>
+                                <th class="p-4">Hours Worked</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4">Logged By & Location</th>
+                                <th class="p-4 action-col">Actions (Edit / Delete)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="machineTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- DUMP TRUCKS TAB -->
+        <div id="dumptruck" class="tab-content space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Dump Truck Haulage & Cycle Counts</h2>
+                    <p class="text-sm text-slate-500">Record daily trip counts, cubic meters hauled, and driver logs.</p>
+                </div>
+                <button id="addDtBtn" onclick="openModal('dumptruckModal')" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm cursor-pointer">
+                    + Add Haulage Record
+                </button>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
+                    <input type="text" placeholder="Search truck or driver..." onkeyup="filterTable('dumptruckTable', this.value)" class="px-4 py-2 text-sm border border-slate-200 rounded-xl w-72 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <div class="text-xs font-medium text-slate-500">Filtered by active Date & Time range</div>
+                    <span id="dumptruckCount" class="text-xs text-slate-500 font-medium">0 records</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="dumptruckTable" class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                                <th class="p-4">Date & Time ↕</th>
+                                <th class="p-4">Truck ID</th>
+                                <th class="p-4">Driver</th>
+                                <th class="p-4">Trips Count</th>
+                                <th class="p-4">Volume (m³)</th>
+                                <th class="p-4">Logged By & Location</th>
+                                <th class="p-4 action-col">Actions (Edit / Delete)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dumptruckTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- EXCAVATION TAB -->
+        <div id="excavation" class="tab-content space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Excavation & Production Progress</h2>
+                    <p class="text-sm text-slate-500">Track daily output volume and section progress across site zones.</p>
+                </div>
+                <button id="addExcBtn" onclick="openModal('excavationModal')" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm cursor-pointer">
+                    + Add Production Record
+                </button>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
+                    <input type="text" placeholder="Search zone or material..." onkeyup="filterTable('excavationTable', this.value)" class="px-4 py-2 text-sm border border-slate-200 rounded-xl w-72 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <div class="text-xs font-medium text-slate-500">Filtered by active Date & Time range</div>
+                    <span id="excavationCount" class="text-xs text-slate-500 font-medium">0 records</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="excavationTable" class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                                <th class="p-4">Date & Time ↕</th>
+                                <th class="p-4">Zone / Area</th>
+                                <th class="p-4">Material Type</th>
+                                <th class="p-4">Volume (m³)</th>
+                                <th class="p-4">Logged By & Location</th>
+                                <th class="p-4 action-col">Actions (Edit / Delete)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="excavationTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PETTY CASH TAB -->
+        <div id="pettycash" class="tab-content space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Petty Cash Vouchers & Balances</h2>
+                    <p class="text-sm text-slate-500">Record cash disbursements, receipts, and replenishment vouchers.</p>
+                </div>
+                <button onclick="openModal('pettycashModal')" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm cursor-pointer">
+                    + Add Petty Cash Entry
+                </button>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
+                    <input type="text" placeholder="Search description or type..." onkeyup="filterTable('pettycashTable', this.value)" class="px-4 py-2 text-sm border border-slate-200 rounded-xl w-72 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <div class="text-xs font-medium text-slate-500">Filtered by active Date & Time range</div>
+                    <span id="pettycashCount" class="text-xs text-slate-500 font-medium">0 records</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="pettycashTable" class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                                <th class="p-4">Date & Time ↕</th>
+                                <th class="p-4">Type</th>
+                                <th class="p-4">Description</th>
+                                <th class="p-4">Amount (ETB)</th>
+                                <th class="p-4">Logged By & Location</th>
+                                <th class="p-4 action-col">Actions (Edit / Delete)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pettycashTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</body>
+</html>
