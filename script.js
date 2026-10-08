@@ -1,14 +1,21 @@
-const API_BASE = '/api';
+// Relative API path works correctly across cPanel domain roots and subdirectories
+const API_BASE = 'api';
 let currentUser = { username: "Guest", role: "none" };
 
 window.addEventListener('DOMContentLoaded', () => {
-    applyRolePermissions();
+    refreshTables();
 });
 
 async function apiGet(table) {
     try {
         const res = await fetch(`${API_BASE}/${table}`);
-        return await res.json();
+        const text = await res.text();
+        try {
+            return JSON.parse(text);
+        } catch (err) {
+            console.error(`API Error on ${table} (Response was not JSON):`, text);
+            return [];
+        }
     } catch (e) {
         console.error(`Error fetching ${table}:`, e);
         return [];
@@ -62,6 +69,12 @@ async function handleLogin(event) {
     const password = document.getElementById('loginPassword').value.trim();
     
     const users = await apiGet('users');
+    
+    if (!users || users.length === 0) {
+        alert("Connection Error: Could not reach backend users database. Check if Node.js app is started in cPanel.");
+        return;
+    }
+
     const dbUser = users.find(u => u.username === username && u.password === password);
     
     if (!dbUser) {
@@ -74,17 +87,12 @@ async function handleLogin(event) {
     document.getElementById('header-username-lbl').innerText = dbUser.username;
     document.getElementById('header-role-lbl').innerText = dbUser.role.toUpperCase();
     
-    applyRolePermissions();
     switchTab('dashboard');
 }
 
 function logout() {
     currentUser = { username: "Guest", role: "none" };
     document.getElementById('authOverlay').style.display = 'flex';
-}
-
-function applyRolePermissions() {
-    // Basic permissions logic
 }
 
 function switchTab(targetId) {
@@ -214,50 +222,39 @@ async function addPettyCashRecord() {
 }
 
 async function refreshTables() {
-    // Users
     const users = await apiGet('users');
     document.getElementById('userTableBody').innerHTML = users.map(u => `<tr class="hover:bg-slate-50"><td class="p-4">${u.username}</td><td class="p-4">${u.password}</td><td class="p-4 uppercase text-xs font-bold">${u.role}</td><td class="p-4"><button onclick="apiDelete('users', ${u.id})" class="text-rose-600">Delete</button></td></tr>`).join('');
 
-    // HR
     const hr = await apiGet('hremployees');
     document.getElementById('hrempTableBody').innerHTML = hr.map(h => `<tr class="hover:bg-slate-50"><td class="p-4">${h.fullname}</td><td class="p-4">${h.department}</td><td class="p-4">${h.position}</td><td class="p-4">${h.phone}</td><td class="p-4"><button onclick="apiDelete('hremployees', ${h.id})" class="text-rose-600">Delete</button></td></tr>`).join('');
 
-    // Store
     const store = await apiGet('storeitems');
     document.getElementById('storeTableBody').innerHTML = store.map(s => `<tr class="hover:bg-slate-50"><td class="p-4 font-mono">${s.item_code}</td><td class="p-4">${s.item_name}</td><td class="p-4">${s.category}</td><td class="p-4 font-bold text-amber-600">${s.qty}</td><td class="p-4">${s.unit}</td><td class="p-4">${s.unit_cost}</td><td class="p-4"><button onclick="apiDelete('storeitems', ${s.id})" class="text-rose-600">Delete</button></td></tr>`).join('');
 
-    // Releases
     const rel = await apiGet('storereleases');
     document.getElementById('releasesTableBody').innerHTML = rel.map(r => `<tr class="hover:bg-slate-50"><td class="p-4">${r.date}</td><td class="p-4">${r.item_code} - ${r.item_name}</td><td class="p-4 font-bold">${r.qty_released}</td><td class="p-4">${r.recipient}</td><td class="p-4">${r.project_site}</td><td class="p-4"><button onclick="apiDelete('storereleases', ${r.id})" class="text-rose-600">Delete</button></td></tr>`).join('');
 
-    // Income
     const inc = await apiGet('siteincome');
     document.getElementById('kpi-income').innerText = `ETB ${inc.reduce((a,c)=>a+c.amount,0).toLocaleString()}`;
     document.getElementById('incomeTableBody').innerHTML = inc.map(i => `<tr class="hover:bg-slate-50"><td class="p-4">${i.date}</td><td class="p-4">${i.category}</td><td class="p-4">${i.client}</td><td class="p-4 text-emerald-600 font-bold">${i.amount}</td><td class="p-4"><button onclick="apiDelete('siteincome', ${i.id})" class="text-rose-600">Delete</button></td></tr>`).join('');
 
-    // Expenses
     const exp = await apiGet('siteexpenses');
     document.getElementById('kpi-expenses').innerText = `ETB ${exp.reduce((a,c)=>a+c.amount,0).toLocaleString()}`;
     document.getElementById('expensesTableBody').innerHTML = exp.map(e => `<tr class="hover:bg-slate-50"><td class="p-4">${e.date}</td><td class="p-4">${e.category}</td><td class="p-4">${e.description}</td><td class="p-4 text-rose-600 font-bold">${e.amount}</td><td class="p-4"><button onclick="apiDelete('siteexpenses', ${e.id})" class="text-rose-600">Delete</button></td></tr>`).join('');
 
-    // Purchases
     const pur = await apiGet('purchases');
     document.getElementById('purchaseTableBody').innerHTML = pur.map(p => `<tr class="hover:bg-slate-50"><td class="p-4">${p.date}</td><td class="p-4">${p.item}</td><td class="p-4">${p.qty}</td><td class="p-4">${p.cost}</td><td class="p-4"><span class="bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs">${p.status}</span></td><td class="p-4"><button onclick="apiDelete('purchases', ${p.id})" class="text-rose-600">Delete</button></td></tr>`).join('');
 
-    // Fuel
     const fuel = await apiGet('fuel');
     document.getElementById('kpi-fuel').innerText = `${fuel.reduce((a,c)=>a+c.litres,0)} L`;
     document.getElementById('fuelTableBody').innerHTML = fuel.map(f => `<tr class="hover:bg-slate-50"><td class="p-4">${f.date}</td><td class="p-4">${f.equipment}</td><td class="p-4">${f.operator}</td><td class="p-4">${f.litres} L</td><td class="p-4"><button onclick="apiDelete('fuel', ${f.id})" class="text-rose-600">Delete</button></td></tr>`).join('');
 
-    // Machines
     const mac = await apiGet('machines');
     document.getElementById('machineTableBody').innerHTML = mac.map(m => `<tr class="hover:bg-slate-50"><td class="p-4">${m.date}</td><td class="p-4">${m.machine}</td><td class="p-4">${m.hours} hrs</td><td class="p-4">${m.status}</td><td class="p-4"><button onclick="apiDelete('machines', ${m.id})" class="text-rose-600">Delete</button></td></tr>`).join('');
 
-    // Dump Trucks
     const dt = await apiGet('dumptrucks');
     document.getElementById('dumptruckTableBody').innerHTML = dt.map(d => `<tr class="hover:bg-slate-50"><td class="p-4">${d.date}</td><td class="p-4">${d.truck}</td><td class="p-4">${d.trips}</td><td class="p-4">${d.volume} m³</td><td class="p-4"><button onclick="apiDelete('dumptrucks', ${d.id})" class="text-rose-600">Delete</button></td></tr>`).join('');
 
-    // Petty Cash
     const pet = await apiGet('pettycash');
     document.getElementById('kpi-petty').innerText = `ETB ${pet.reduce((a,c)=>a+c.amount,0).toLocaleString()}`;
     document.getElementById('pettycashTableBody').innerHTML = pet.map(p => `<tr class="hover:bg-slate-50"><td class="p-4">${p.date}</td><td class="p-4">${p.description}</td><td class="p-4 text-blue-600 font-bold">${p.amount}</td><td class="p-4"><button onclick="apiDelete('pettycash', ${p.id})" class="text-rose-600">Delete</button></td></tr>`).join('');
