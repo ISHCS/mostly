@@ -5,6 +5,7 @@ const path = require('path');
 
 const app = express();
 app.use(express.json());
+// Enable CORS so your frontend (even if on GitHub Pages or another domain) can connect to this backend
 app.use(cors());
 
 // Request logger for cPanel debugging
@@ -18,8 +19,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const dataFile = path.join(__dirname, 'database.json');
 
-// In-memory fallback store if disk writing is restricted by cPanel permissions
-let memoryStore = {
+const defaultStore = {
     users: [
         { id: 1, username: 'manager', password: '123', role: 'manager' },
         { id: 2, username: 'hrstaff', password: '123', role: 'hr' },
@@ -44,25 +44,32 @@ let memoryStore = {
 };
 
 function readData() {
+    let data = JSON.parse(JSON.stringify(defaultStore));
     try {
-        if (!fs.existsSync(dataFile)) {
-            fs.writeFileSync(dataFile, JSON.stringify(memoryStore, null, 2));
-            return memoryStore;
+        if (fs.existsSync(dataFile)) {
+            const raw = fs.readFileSync(dataFile, 'utf8');
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+                data = { ...data, ...parsed };
+            }
         }
-        const raw = fs.readFileSync(dataFile, 'utf8');
-        return JSON.parse(raw);
     } catch (e) {
-        console.log("Using in-memory store due to file permissions:", e.message);
-        return memoryStore;
+        console.log("Error reading database file, using defaults:", e.message);
     }
+
+    if (!data.users || data.users.length === 0) {
+        data.users = defaultStore.users;
+        writeData(data);
+    }
+
+    return data;
 }
 
 function writeData(data) {
-    memoryStore = data;
     try {
         fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
     } catch (e) {
-        console.log("Disk write skipped (using memory):", e.message);
+        console.log("Disk write skipped:", e.message);
     }
 }
 
@@ -109,7 +116,6 @@ app.delete('/api/:table/:id', (req, res) => {
     res.json({ deleted: 1, success: true });
 });
 
-// Store Release atomic transaction
 app.post('/api/store-release', (req, res) => {
     const { itemId, qtyReleased, releaseData } = req.body;
     const data = readData();
@@ -127,7 +133,6 @@ app.post('/api/store-release', (req, res) => {
     res.json({ success: true, remainingQty: item.qty });
 });
 
-// Fallback route for SPA
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

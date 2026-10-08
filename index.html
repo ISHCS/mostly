@@ -20,11 +20,16 @@
             
             <form onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Username</label>
+                    <label for="backendUrl" class="block text-xs font-bold text-slate-700 uppercase mb-1">Backend API URL</label>
+                    <input type="text" id="backendUrl" required value="" placeholder="https://yourdomain.com" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    <p class="text-[10px] text-slate-400 mt-1">Leave blank if hosting frontend directly on cPanel, or enter your cPanel Node.js server URL.</p>
+                </div>
+                <div>
+                    <label for="loginUsername" class="block text-xs font-bold text-slate-700 uppercase mb-1">Username</label>
                     <input type="text" id="loginUsername" required value="manager" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Password</label>
+                    <label for="loginPassword" class="block text-xs font-bold text-slate-700 uppercase mb-1">Password</label>
                     <input type="password" id="loginPassword" required value="123" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                 </div>
                 <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">

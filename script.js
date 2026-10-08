@@ -1,14 +1,20 @@
-// Relative API path works correctly across cPanel domain roots and subdirectories
-const API_BASE = 'api';
 let currentUser = { username: "Guest", role: "none" };
 
 window.addEventListener('DOMContentLoaded', () => {
-    refreshTables();
+    // Auto-populate backend URL input if stored or default to current origin
+    const savedUrl = localStorage.getItem('backend_url') || (window.location.hostname.includes('github.io') ? '' : window.location.origin);
+    document.getElementById('backendUrl').value = savedUrl;
 });
+
+function getApiBase() {
+    let url = document.getElementById('backendUrl').value.trim();
+    if (url.endsWith('/')) url = url.slice(0, -1);
+    return url ? `${url}/api` : 'api';
+}
 
 async function apiGet(table) {
     try {
-        const res = await fetch(`${API_BASE}/${table}`);
+        const res = await fetch(`${getApiBase()}/${table}`);
         const text = await res.text();
         try {
             return JSON.parse(text);
@@ -24,7 +30,7 @@ async function apiGet(table) {
 
 async function apiPost(table, data) {
     try {
-        const res = await fetch(`${API_BASE}/${table}`, {
+        const res = await fetch(`${getApiBase()}/${table}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -39,7 +45,7 @@ async function apiPost(table, data) {
 
 async function apiPut(table, id, data) {
     try {
-        const res = await fetch(`${API_BASE}/${table}/${id}`, {
+        const res = await fetch(`${getApiBase()}/${table}/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -54,7 +60,7 @@ async function apiPut(table, id, data) {
 
 async function apiDelete(table, id) {
     try {
-        const res = await fetch(`${API_BASE}/${table}/${id}`, { method: 'DELETE' });
+        const res = await fetch(`${getApiBase()}/${table}/${id}`, { method: 'DELETE' });
         const result = await res.json();
         refreshTables();
         return result;
@@ -65,13 +71,16 @@ async function apiDelete(table, id) {
 
 async function handleLogin(event) {
     event.preventDefault();
+    const backendUrlInput = document.getElementById('backendUrl').value.trim();
+    localStorage.setItem('backend_url', backendUrlInput);
+
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
     
     const users = await apiGet('users');
     
     if (!users || users.length === 0) {
-        alert("Connection Error: Could not reach backend users database. Check if Node.js app is started in cPanel.");
+        alert("Connection Error: Could not reach backend users database. Check if your Backend API URL is correct and your cPanel Node.js app is started.");
         return;
     }
 
@@ -155,7 +164,7 @@ async function addStoreReleaseRecord() {
     const nowStr = new Date().toLocaleString();
 
     if (recipient) {
-        const res = await fetch(`${API_BASE}/store-release`, {
+        const res = await fetch(`${getApiBase()}/store-release`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ itemId: itemObj.id, qtyReleased: qtyToRelease, releaseData: { date, item_id: itemObj.id, item_code: itemObj.item_code, item_name: itemObj.item_name, qty_released: qtyToRelease, recipient, project_site: projectSite, recorded_by: currentUser.username, recorded_date: nowStr } })
