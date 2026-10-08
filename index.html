@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bishoftu Site & Fleet Management System (Income & Expenses)</title>
+    <title>Bishoftu Site & Fleet Management System (Admin-Only Edit/Delete)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <link rel="stylesheet" href="style.css">
@@ -23,8 +23,8 @@
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Select Role / Profile</label>
                     <select id="loginRoleSelect" onchange="updateLoginHint(this.value)" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none cursor-pointer">
-                        <option value="manager">Site Manager (Admin / Full Access & Backups)</option>
-                        <option value="finance">Finance Manager (Income, Expenses & Petty Cash)</option>
+                        <option value="manager">Site Manager (Admin / Full CRUD & Backups)</option>
+                        <option value="finance">Finance Manager (Income, Expenses & Ledger Entry)</option>
                         <option value="fleet">Fleet Supervisor (View Only)</option>
                         <option value="operator">Machine Operator (Can Log Machines & Dump Trucks)</option>
                     </select>
@@ -54,7 +54,7 @@
                 <div class="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center font-black text-slate-900 text-lg">BF</div>
                 <div>
                     <h1 class="font-bold text-lg leading-tight">Bishoftu Site & Fleet Management</h1>
-                    <p class="text-xs text-slate-400">Income & Expense Financial Accounting</p>
+                    <p class="text-xs text-slate-400">Admin-Only Edit & Delete RBAC Portal</p>
                 </div>
             </div>
             
@@ -87,7 +87,7 @@
                 <button onclick="switchTab('fuel')" data-target="fuel" class="tab-btn text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">⛽ Fuel Reports</button>
                 <button onclick="switchTab('machine')" data-target="machine" class="tab-btn text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">🚜 Machine Logs</button>
                 <button onclick="switchTab('dumptruck')" data-target="dumptruck" class="tab-btn text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">🚛 Dump Trucks</button>
-                <button onclick="switchTab('pettycash')" data-target="pettycash" class="tab-btn finance-nav-tab text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">💵 Petty Cash</button>
+                <button id="pettyCashTabBtn" onclick="switchTab('pettycash')" data-target="pettycash" class="tab-btn finance-nav-tab text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">💵 Petty Cash</button>
             </div>
         </div>
     </header>
@@ -200,7 +200,7 @@
             </div>
         </div>
 
-        <!-- SITE INCOME TAB (Finance & Admin) -->
+        <!-- SITE INCOME TAB -->
         <div id="income" class="tab-content space-y-6">
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
                 <div>
@@ -231,7 +231,7 @@
             </div>
         </div>
 
-        <!-- OTHER EXPENSES TAB (Finance & Admin) -->
+        <!-- OTHER EXPENSES TAB -->
         <div id="expenses" class="tab-content space-y-6">
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
                 <div>
