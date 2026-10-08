@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adis Alamyahu Construction - Site & Fleet Management System</title>
+    <title>Adis Alamyahu Construction - Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -21,14 +21,14 @@
             <form onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Username</label>
-                    <input type="text" id="loginUsername" required placeholder="Enter username (e.g. manager)" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    <input type="text" id="loginUsername" required value="manager" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Password</label>
-                    <input type="password" id="loginPassword" required placeholder="Enter password (e.g. 123)" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    <input type="password" id="loginPassword" required value="123" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                 </div>
                 <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
-                    Authentication verified against centralized server database.
+                    Default Admin Login: <b>manager</b> / <b>123</b>
                 </div>
                 <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-xl text-sm shadow-md transition">
                     Sign In to Portal
@@ -52,7 +52,6 @@
                 <div class="text-right hidden sm:block">
                     <div id="header-username-lbl" class="text-xs font-bold text-amber-400">Guest</div>
                     <div id="header-role-lbl" class="text-[10px] text-slate-400 uppercase">NOT AUTHENTICATED</div>
-                    <div class="text-[9px] text-emerald-400">Server Status: Online & Connected</div>
                 </div>
                 <button onclick="logout()" class="bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-rose-600/30 transition">Sign Out</button>
             </div>
@@ -62,210 +61,198 @@
         <div class="bg-slate-800 border-t border-slate-700">
             <div class="max-w-7xl mx-auto px-4 flex overflow-x-auto no-scrollbar space-x-1 py-2">
                 <button onclick="switchTab('dashboard')" data-target="dashboard" class="tab-btn bg-amber-500 text-slate-900 font-bold px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap shadow">📊 Dashboard</button>
-                <button onclick="switchTab('users')" data-target="users" class="tab-btn hr-nav-tab text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">🔑 Portal Users</button>
-                <button onclick="switchTab('hremp')" data-target="hremp" class="tab-btn hr-nav-tab text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">👥 HR Employees</button>
-                <button onclick="switchTab('store')" data-target="store" class="tab-btn finance-nav-tab text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">📦 Store Inventory</button>
-                <button onclick="switchTab('storereleases')" data-target="storereleases" class="tab-btn finance-nav-tab text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">📤 Store Releases</button>
-                <button onclick="switchTab('income')" data-target="income" class="tab-btn finance-nav-tab text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">💰 Site Income</button>
-                <button onclick="switchTab('expenses')" data-target="expenses" class="tab-btn finance-nav-tab text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">📉 Other Expenses</button>
+                <button onclick="switchTab('users')" data-target="users" class="tab-btn text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">🔑 Portal Users</button>
+                <button onclick="switchTab('hremp')" data-target="hremp" class="tab-btn text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">👥 HR Employees</button>
+                <button onclick="switchTab('store')" data-target="store" class="tab-btn text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">📦 Store Inventory</button>
+                <button onclick="switchTab('storereleases')" data-target="storereleases" class="tab-btn text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">📤 Store Releases</button>
+                <button onclick="switchTab('income')" data-target="income" class="tab-btn text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">💰 Site Income</button>
+                <button onclick="switchTab('expenses')" data-target="expenses" class="tab-btn text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">📉 Other Expenses</button>
                 <button onclick="switchTab('purchase')" data-target="purchase" class="tab-btn text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">🛒 Purchase Requests</button>
                 <button onclick="switchTab('fuel')" data-target="fuel" class="tab-btn text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">⛽ Fuel Reports</button>
                 <button onclick="switchTab('machine')" data-target="machine" class="tab-btn text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">🚜 Machine Logs</button>
                 <button onclick="switchTab('dumptruck')" data-target="dumptruck" class="tab-btn text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">🚛 Dump Trucks</button>
-                <button onclick="switchTab('pettycash')" data-target="pettycash" class="tab-btn finance-nav-tab text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">💵 Petty Cash</button>
+                <button onclick="switchTab('pettycash')" data-target="pettycash" class="tab-btn text-slate-300 hover:bg-slate-700 hover:text-white font-medium px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 whitespace-nowrap">💵 Petty Cash</button>
             </div>
         </div>
     </header>
 
     <!-- Main Workspace -->
     <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
-
-        <!-- GLOBAL DATE FILTER TOOLBAR -->
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
-            <span class="text-xs font-bold text-slate-700 uppercase">Global Report Date Range:</span>
-            <div class="flex flex-wrap items-center gap-3">
-                <input type="date" id="globalDateFrom" onchange="refreshTables()" class="px-3 py-1.5 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                <input type="date" id="globalDateTo" onchange="refreshTables()" class="px-3 py-1.5 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                <button onclick="resetDateFilter()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-bold transition">Clear Dates</button>
-            </div>
-        </div>
-
         <!-- DASHBOARD TAB -->
         <div id="dashboard" class="tab-content active space-y-6">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between finance-kpi-card">
-                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Site Income</div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="text-xs font-bold text-slate-400 uppercase">Total Site Income</div>
                     <div class="text-3xl font-black text-emerald-600 mt-2" id="kpi-income">ETB 0</div>
                 </div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between finance-kpi-card">
-                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Other Expenses</div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="text-xs font-bold text-slate-400 uppercase">Total Expenses</div>
                     <div class="text-3xl font-black text-rose-600 mt-2" id="kpi-expenses">ETB 0</div>
                 </div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between finance-kpi-card">
-                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Petty Cash Balance</div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="text-xs font-bold text-slate-400 uppercase">Petty Cash</div>
                     <div class="text-3xl font-black text-blue-600 mt-2" id="kpi-petty">ETB 0</div>
                 </div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
-                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Fuel Issued</div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="text-xs font-bold text-slate-400 uppercase">Fuel Issued</div>
                     <div class="text-3xl font-black text-amber-600 mt-2" id="kpi-fuel">0 L</div>
                 </div>
             </div>
         </div>
 
-        <!-- PORTAL USERS TAB -->
+        <!-- USERS TAB -->
         <div id="users" class="tab-content space-y-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
-                <h2 class="text-xl font-bold text-slate-900">Portal Users</h2>
-                <button id="addUserBtn" onclick="addUserRecord()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm">+ Add User</button>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border flex justify-between items-center">
+                <h2 class="text-xl font-bold">Portal Users</h2>
+                <button onclick="addUserRecord()" class="bg-amber-500 font-bold px-4 py-2.5 rounded-xl text-sm">+ Add User</button>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <table class="w-full text-left border-collapse">
-                    <thead><tr class="bg-slate-50 text-slate-600 uppercase text-xs border-b"><th class="p-4">Username</th><th class="p-4">Password</th><th class="p-4">Role</th><th class="p-4 admin-action-header">Actions</th></tr></thead>
-                    <tbody id="userTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <table class="w-full text-left">
+                    <thead><tr class="bg-slate-50 text-xs border-b"><th class="p-4">Username</th><th class="p-4">Password</th><th class="p-4">Role</th><th class="p-4">Action</th></tr></thead>
+                    <tbody id="userTableBody" class="divide-y text-sm"></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- HR EMPLOYEES TAB -->
+        <!-- HR TAB -->
         <div id="hremp" class="tab-content space-y-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
-                <h2 class="text-xl font-bold text-slate-900">HR Employees</h2>
-                <button id="addHrEmpBtn" onclick="addHrEmpRecord()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm">+ Register Employee</button>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border flex justify-between items-center">
+                <h2 class="text-xl font-bold">HR Employees</h2>
+                <button onclick="addHrEmpRecord()" class="bg-amber-500 font-bold px-4 py-2.5 rounded-xl text-sm">+ Add Employee</button>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <table class="w-full text-left border-collapse">
-                    <thead><tr class="bg-slate-50 text-slate-600 uppercase text-xs border-b"><th class="p-4">Name</th><th class="p-4">Department</th><th class="p-4">Position</th><th class="p-4">Phone</th><th class="p-4 admin-action-header">Actions</th></tr></thead>
-                    <tbody id="hrempTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <table class="w-full text-left">
+                    <thead><tr class="bg-slate-50 text-xs border-b"><th class="p-4">Name</th><th class="p-4">Department</th><th class="p-4">Position</th><th class="p-4">Phone</th><th class="p-4">Action</th></tr></thead>
+                    <tbody id="hrempTableBody" class="divide-y text-sm"></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- STORE INVENTORY TAB -->
+        <!-- STORE TAB -->
         <div id="store" class="tab-content space-y-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
-                <h2 class="text-xl font-bold text-slate-900">Store Inventory</h2>
-                <button id="addStoreBtn" onclick="addStoreItemRecord()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm">+ Add Item</button>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border flex justify-between items-center">
+                <h2 class="text-xl font-bold">Store Inventory</h2>
+                <button onclick="addStoreItemRecord()" class="bg-amber-500 font-bold px-4 py-2.5 rounded-xl text-sm">+ Add Item</button>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <table class="w-full text-left border-collapse">
-                    <thead><tr class="bg-slate-50 text-slate-600 uppercase text-xs border-b"><th class="p-4">Code</th><th class="p-4">Name</th><th class="p-4">Category</th><th class="p-4">Qty</th><th class="p-4">Unit</th><th class="p-4">Cost (ETB)</th><th class="p-4 admin-action-header">Actions</th></tr></thead>
-                    <tbody id="storeTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <table class="w-full text-left">
+                    <thead><tr class="bg-slate-50 text-xs border-b"><th class="p-4">Code</th><th class="p-4">Name</th><th class="p-4">Category</th><th class="p-4">Qty</th><th class="p-4">Unit</th><th class="p-4">Unit Cost</th><th class="p-4">Action</th></tr></thead>
+                    <tbody id="storeTableBody" class="divide-y text-sm"></tbody>
                 </table>
             </div>
         </div>
 
         <!-- STORE RELEASES TAB -->
         <div id="storereleases" class="tab-content space-y-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
-                <h2 class="text-xl font-bold text-slate-900">Store Releases & Issuance</h2>
-                <button id="addReleaseBtn" onclick="addStoreReleaseRecord()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm">+ Issue / Release Item</button>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border flex justify-between items-center">
+                <h2 class="text-xl font-bold">Store Releases</h2>
+                <button onclick="addStoreReleaseRecord()" class="bg-amber-500 font-bold px-4 py-2.5 rounded-xl text-sm">+ Issue Item</button>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <table class="w-full text-left border-collapse">
-                    <thead><tr class="bg-slate-50 text-slate-600 uppercase text-xs border-b"><th class="p-4">Date</th><th class="p-4">Item</th><th class="p-4">Qty Released</th><th class="p-4">Recipient</th><th class="p-4">Site</th><th class="p-4 admin-action-header">Actions</th></tr></thead>
-                    <tbody id="releasesTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <table class="w-full text-left">
+                    <thead><tr class="bg-slate-50 text-xs border-b"><th class="p-4">Date</th><th class="p-4">Item</th><th class="p-4">Released Qty</th><th class="p-4">Recipient</th><th class="p-4">Site</th><th class="p-4">Action</th></tr></thead>
+                    <tbody id="releasesTableBody" class="divide-y text-sm"></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- SITE INCOME TAB -->
+        <!-- INCOME TAB -->
         <div id="income" class="tab-content space-y-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
-                <h2 class="text-xl font-bold text-slate-900">Site Income</h2>
-                <button id="addIncomeBtn" onclick="addIncomeRecord()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm">+ Add Income</button>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border flex justify-between items-center">
+                <h2 class="text-xl font-bold">Site Income</h2>
+                <button onclick="addIncomeRecord()" class="bg-amber-500 font-bold px-4 py-2.5 rounded-xl text-sm">+ Add Income</button>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <table class="w-full text-left border-collapse">
-                    <thead><tr class="bg-slate-50 text-slate-600 uppercase text-xs border-b"><th class="p-4">Date</th><th class="p-4">Category</th><th class="p-4">Client</th><th class="p-4">Amount (ETB)</th><th class="p-4 admin-action-header">Actions</th></tr></thead>
-                    <tbody id="incomeTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <table class="w-full text-left">
+                    <thead><tr class="bg-slate-50 text-xs border-b"><th class="p-4">Date</th><th class="p-4">Category</th><th class="p-4">Client</th><th class="p-4">Amount</th><th class="p-4">Action</th></tr></thead>
+                    <tbody id="incomeTableBody" class="divide-y text-sm"></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- OTHER EXPENSES TAB -->
+        <!-- EXPENSES TAB -->
         <div id="expenses" class="tab-content space-y-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
-                <h2 class="text-xl font-bold text-slate-900">Other Expenses</h2>
-                <button id="addExpenseBtn" onclick="addExpenseRecord()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm">+ Add Expense</button>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border flex justify-between items-center">
+                <h2 class="text-xl font-bold">Other Expenses</h2>
+                <button onclick="addExpenseRecord()" class="bg-amber-500 font-bold px-4 py-2.5 rounded-xl text-sm">+ Add Expense</button>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <table class="w-full text-left border-collapse">
-                    <thead><tr class="bg-slate-50 text-slate-600 uppercase text-xs border-b"><th class="p-4">Date</th><th class="p-4">Category</th><th class="p-4">Description</th><th class="p-4">Amount (ETB)</th><th class="p-4 admin-action-header">Actions</th></tr></thead>
-                    <tbody id="expensesTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <table class="w-full text-left">
+                    <thead><tr class="bg-slate-50 text-xs border-b"><th class="p-4">Date</th><th class="p-4">Category</th><th class="p-4">Description</th><th class="p-4">Amount</th><th class="p-4">Action</th></tr></thead>
+                    <tbody id="expensesTableBody" class="divide-y text-sm"></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- PURCHASE REQUESTS TAB -->
+        <!-- PURCHASES TAB -->
         <div id="purchase" class="tab-content space-y-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
-                <h2 class="text-xl font-bold text-slate-900">Purchase Requests</h2>
-                <button onclick="addPurchaseRecord()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm">+ Add Purchase Request</button>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border flex justify-between items-center">
+                <h2 class="text-xl font-bold">Purchase Requests</h2>
+                <button onclick="addPurchaseRecord()" class="bg-amber-500 font-bold px-4 py-2.5 rounded-xl text-sm">+ Add Request</button>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <table class="w-full text-left border-collapse">
-                    <thead><tr class="bg-slate-50 text-slate-600 uppercase text-xs border-b"><th class="p-4">Date</th><th class="p-4">Item</th><th class="p-4">Qty</th><th class="p-4">Cost (ETB)</th><th class="p-4">Status</th><th class="p-4 admin-action-header">Manager Approval</th></tr></thead>
-                    <tbody id="purchaseTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <table class="w-full text-left">
+                    <thead><tr class="bg-slate-50 text-xs border-b"><th class="p-4">Date</th><th class="p-4">Item</th><th class="p-4">Qty</th><th class="p-4">Cost</th><th class="p-4">Status</th><th class="p-4">Action</th></tr></thead>
+                    <tbody id="purchaseTableBody" class="divide-y text-sm"></tbody>
                 </table>
             </div>
         </div>
 
         <!-- FUEL TAB -->
         <div id="fuel" class="tab-content space-y-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
-                <h2 class="text-xl font-bold text-slate-900">Fuel Reports</h2>
-                <button id="addFuelBtn" onclick="addFuelRecord()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm">+ Add Fuel Log</button>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border flex justify-between items-center">
+                <h2 class="text-xl font-bold">Fuel Reports</h2>
+                <button onclick="addFuelRecord()" class="bg-amber-500 font-bold px-4 py-2.5 rounded-xl text-sm">+ Add Fuel Log</button>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <table class="w-full text-left border-collapse">
-                    <thead><tr class="bg-slate-50 text-slate-600 uppercase text-xs border-b"><th class="p-4">Date</th><th class="p-4">Equipment</th><th class="p-4">Operator</th><th class="p-4">Litres</th><th class="p-4 admin-action-header">Actions</th></tr></thead>
-                    <tbody id="fuelTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <table class="w-full text-left">
+                    <thead><tr class="bg-slate-50 text-xs border-b"><th class="p-4">Date</th><th class="p-4">Equipment</th><th class="p-4">Operator</th><th class="p-4">Litres</th><th class="p-4">Action</th></tr></thead>
+                    <tbody id="fuelTableBody" class="divide-y text-sm"></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- MACHINE LOGS TAB -->
+        <!-- MACHINE TAB -->
         <div id="machine" class="tab-content space-y-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
-                <h2 class="text-xl font-bold text-slate-900">Machine Logs</h2>
-                <button id="addMachineBtn" onclick="addMachineRecord()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm">+ Add Machine Log</button>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border flex justify-between items-center">
+                <h2 class="text-xl font-bold">Machine Logs</h2>
+                <button onclick="addMachineRecord()" class="bg-amber-500 font-bold px-4 py-2.5 rounded-xl text-sm">+ Add Machine Log</button>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <table class="w-full text-left border-collapse">
-                    <thead><tr class="bg-slate-50 text-slate-600 uppercase text-xs border-b"><th class="p-4">Date</th><th class="p-4">Machine</th><th class="p-4">Hours</th><th class="p-4">Status</th><th class="p-4 admin-action-header">Actions</th></tr></thead>
-                    <tbody id="machineTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <table class="w-full text-left">
+                    <thead><tr class="bg-slate-50 text-xs border-b"><th class="p-4">Date</th><th class="p-4">Machine</th><th class="p-4">Hours</th><th class="p-4">Status</th><th class="p-4">Action</th></tr></thead>
+                    <tbody id="machineTableBody" class="divide-y text-sm"></tbody>
                 </table>
             </div>
         </div>
 
         <!-- DUMP TRUCKS TAB -->
         <div id="dumptruck" class="tab-content space-y-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
-                <h2 class="text-xl font-bold text-slate-900">Dump Truck Haulage</h2>
-                <button id="addDtBtn" onclick="addDumpTruckRecord()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm">+ Add Haulage</button>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border flex justify-between items-center">
+                <h2 class="text-xl font-bold">Dump Truck Haulage</h2>
+                <button onclick="addDumpTruckRecord()" class="bg-amber-500 font-bold px-4 py-2.5 rounded-xl text-sm">+ Add Haulage</button>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <table class="w-full text-left border-collapse">
-                    <thead><tr class="bg-slate-50 text-slate-600 uppercase text-xs border-b"><th class="p-4">Date</th><th class="p-4">Truck</th><th class="p-4">Trips</th><th class="p-4">Volume (m³)</th><th class="p-4 admin-action-header">Actions</th></tr></thead>
-                    <tbody id="dumptruckTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <table class="w-full text-left">
+                    <thead><tr class="bg-slate-50 text-xs border-b"><th class="p-4">Date</th><th class="p-4">Truck</th><th class="p-4">Trips</th><th class="p-4">Volume</th><th class="p-4">Action</th></tr></thead>
+                    <tbody id="dumptruckTableBody" class="divide-y text-sm"></tbody>
                 </table>
             </div>
         </div>
 
         <!-- PETTY CASH TAB -->
         <div id="pettycash" class="tab-content space-y-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
-                <h2 class="text-xl font-bold text-slate-900">Petty Cash Vouchers</h2>
-                <button id="addPettyBtn" onclick="addPettyCashRecord()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm">+ Add Petty Cash</button>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border flex justify-between items-center">
+                <h2 class="text-xl font-bold">Petty Cash Vouchers</h2>
+                <button onclick="addPettyCashRecord()" class="bg-amber-500 font-bold px-4 py-2.5 rounded-xl text-sm">+ Add Voucher</button>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <table class="w-full text-left border-collapse">
-                    <thead><tr class="bg-slate-50 text-slate-600 uppercase text-xs border-b"><th class="p-4">Date</th><th class="p-4">Description</th><th class="p-4">Amount (ETB)</th><th class="p-4 admin-action-header">Actions</th></tr></thead>
-                    <tbody id="pettycashTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <table class="w-full text-left">
+                    <thead><tr class="bg-slate-50 text-xs border-b"><th class="p-4">Date</th><th class="p-4">Description</th><th class="p-4">Amount</th><th class="p-4">Action</th></tr></thead>
+                    <tbody id="pettycashTableBody" class="divide-y text-sm"></tbody>
                 </table>
             </div>
         </div>
-
     </main>
 
     <script src="script.js"></script>

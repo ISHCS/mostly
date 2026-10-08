@@ -1,5 +1,5 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const fs = require('fs');
 const cors = require('cors');
 const path = require('path');
 
@@ -7,124 +7,124 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Request logger for cPanel debugging
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
+
 // Serve static frontend files from public folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Persistent SQLite database path on hosting server disk
-const dbPath = path.join(__dirname, 'adis_alamyahu.db');
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error("Database connection error:", err.message);
-    } else {
-        console.log("Connected to SQLite database at:", dbPath);
+const dataFile = path.join(__dirname, 'database.json');
+
+// In-memory fallback store if disk writing is restricted by cPanel permissions
+let memoryStore = {
+    users: [
+        { id: 1, username: 'manager', password: '123', role: 'manager' },
+        { id: 2, username: 'hrstaff', password: '123', role: 'hr' },
+        { id: 3, username: 'finance', password: '123', role: 'finance' },
+        { id: 4, username: 'operator', password: '123', role: 'operator' },
+        { id: 5, username: 'fleet', password: '123', role: 'fleet' }
+    ],
+    hremployees: [],
+    storeitems: [
+        { id: 1, item_code: 'MTR-001', item_name: 'Portland Cement', category: 'Building Materials', qty: 450, unit: 'Bags', unit_cost: 1150, recorded_by: 'manager', recorded_date: new Date().toLocaleString() }
+    ],
+    storereleases: [],
+    siteincome: [
+        { id: 1, date: new Date().toISOString().slice(0, 10), category: 'Aggregate Sales', client: 'Awash Construction', amount: 150000, recorded_by: 'manager', recorded_date: new Date().toLocaleString() }
+    ],
+    siteexpenses: [],
+    purchases: [],
+    fuel: [],
+    machines: [],
+    dumptrucks: [],
+    pettycash: []
+};
+
+function readData() {
+    try {
+        if (!fs.existsSync(dataFile)) {
+            fs.writeFileSync(dataFile, JSON.stringify(memoryStore, null, 2));
+            return memoryStore;
+        }
+        const raw = fs.readFileSync(dataFile, 'utf8');
+        return JSON.parse(raw);
+    } catch (e) {
+        console.log("Using in-memory store due to file permissions:", e.message);
+        return memoryStore;
     }
-});
+}
 
-// Initialize Tables and Guaranteed Default Accounts
-db.serialize(() => {
-    db.run(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, role TEXT)`);
-    db.run(`CREATE TABLE IF NOT EXISTS hremployees (id INTEGER PRIMARY KEY AUTOINCREMENT, fullname TEXT, department TEXT, position TEXT, phone TEXT, recorded_by TEXT, recorded_date TEXT)`);
-    db.run(`CREATE TABLE IF NOT EXISTS storeitems (id INTEGER PRIMARY KEY AUTOINCREMENT, item_code TEXT, item_name TEXT, category TEXT, qty REAL, unit TEXT, unit_cost REAL, recorded_by TEXT, recorded_date TEXT)`);
-    db.run(`CREATE TABLE IF NOT EXISTS storereleases (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, item_id INTEGER, item_code TEXT, item_name TEXT, qty_released REAL, recipient TEXT, project_site TEXT, recorded_by TEXT, recorded_date TEXT)`);
-    db.run(`CREATE TABLE IF NOT EXISTS siteincome (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, category TEXT, client TEXT, amount REAL, recorded_by TEXT, recorded_date TEXT)`);
-    db.run(`CREATE TABLE IF NOT EXISTS siteexpenses (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, category TEXT, description TEXT, amount REAL, recorded_by TEXT, recorded_date TEXT)`);
-    db.run(`CREATE TABLE IF NOT EXISTS purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, item TEXT, qty REAL, cost REAL, status TEXT, recorded_by TEXT, recorded_date TEXT)`);
-    db.run(`CREATE TABLE IF NOT EXISTS fuel (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, equipment TEXT, operator TEXT, litres REAL, recorded_by TEXT, recorded_date TEXT)`);
-    db.run(`CREATE TABLE IF NOT EXISTS machines (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, machine TEXT, hours REAL, status TEXT, recorded_by TEXT, recorded_date TEXT)`);
-    db.run(`CREATE TABLE IF NOT EXISTS dumptrucks (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, truck TEXT, trips INTEGER, volume REAL, recorded_by TEXT, recorded_date TEXT)`);
-    db.run(`CREATE TABLE IF NOT EXISTS pettycash (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, description TEXT, amount REAL, recorded_by TEXT, recorded_date TEXT)`, () => {
-        // Guaranteed seed so manager / 123 always works
-        const nowStr = new Date().toLocaleString();
-        const todayStr = new Date().toISOString().slice(0, 10);
-
-        db.run(`INSERT OR IGNORE INTO users (username, password, role) VALUES ('manager', '123', 'manager')`);
-        db.run(`INSERT OR IGNORE INTO users (username, password, role) VALUES ('hrstaff', '123', 'hr')`);
-        db.run(`INSERT OR IGNORE INTO users (username, password, role) VALUES ('finance', '123', 'finance')`);
-        db.run(`INSERT OR IGNORE INTO users (username, password, role) VALUES ('operator', '123', 'operator')`);
-        db.run(`INSERT OR IGNORE INTO users (username, password, role) VALUES ('fleet', '123', 'fleet')`);
-
-        db.get(`SELECT COUNT(*) as count FROM storeitems`, (err, row) => {
-            if (!err && row && row.count === 0) {
-                db.run(`INSERT INTO storeitems (item_code, item_name, category, qty, unit, unit_cost, recorded_by, recorded_date) VALUES ('MTR-001', 'Portland Cement', 'Building Materials', 450, 'Bags', 1150, 'manager', '${nowStr}')`);
-                db.run(`INSERT INTO siteincome (date, category, client, amount, recorded_by, recorded_date) VALUES ('${todayStr}', 'Aggregate Sales', 'Awash Construction', 150000, 'manager', '${nowStr}')`);
-            }
-        });
-    });
-});
+function writeData(data) {
+    memoryStore = data;
+    try {
+        fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
+    } catch (e) {
+        console.log("Disk write skipped (using memory):", e.message);
+    }
+}
 
 // --- REST API ENDPOINTS ---
 
 app.get('/api/:table', (req, res) => {
     const table = req.params.table;
-    const allowed = ['users', 'hremployees', 'storeitems', 'storereleases', 'siteincome', 'siteexpenses', 'purchases', 'fuel', 'machines', 'dumptrucks', 'pettycash'];
-    if (!allowed.includes(table)) return res.status(400).json({ error: "Invalid table" });
-
-    db.all(`SELECT * FROM ${table} ORDER BY id DESC`, [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
-    });
+    const data = readData();
+    if (!data[table]) return res.status(400).json({ error: "Invalid table" });
+    res.json(data[table]);
 });
 
 app.post('/api/:table', (req, res) => {
     const table = req.params.table;
-    const data = req.body;
-    const keys = Object.keys(data);
-    const values = Object.values(data);
-    if (keys.length === 0) return res.status(400).json({ error: "No data" });
+    const data = readData();
+    if (!data[table]) return res.status(400).json({ error: "Invalid table" });
 
-    const placeholders = keys.map(() => '?').join(',');
-    db.run(`INSERT INTO ${table} (${keys.join(',')}) VALUES (${placeholders})`, values, function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ id: this.lastID, success: true });
-    });
+    const newItem = { id: Date.now(), ...req.body };
+    data[table].unshift(newItem);
+    writeData(data);
+    res.json({ id: newItem.id, success: true });
 });
 
 app.put('/api/:table/:id', (req, res) => {
     const { table, id } = req.params;
-    const data = req.body;
-    const keys = Object.keys(data);
-    const values = Object.values(data);
-    const setClause = keys.map(k => `${k} = ?`).join(', ');
+    const data = readData();
+    if (!data[table]) return res.status(400).json({ error: "Invalid table" });
 
-    db.run(`UPDATE ${table} SET ${setClause} WHERE id = ?`, [...values, id], function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ updated: this.changes, success: true });
-    });
+    const index = data[table].findIndex(item => item.id == id);
+    if (index === -1) return res.status(404).json({ error: "Item not found" });
+
+    data[table][index] = { ...data[table][index], ...req.body, id: Number(id) };
+    writeData(data);
+    res.json({ updated: 1, success: true });
 });
 
 app.delete('/api/:table/:id', (req, res) => {
     const { table, id } = req.params;
-    db.run(`DELETE FROM ${table} WHERE id = ?`, [id], function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ deleted: this.changes, success: true });
-    });
+    const data = readData();
+    if (!data[table]) return res.status(400).json({ error: "Invalid table" });
+
+    data[table] = data[table].filter(item => item.id != id);
+    writeData(data);
+    res.json({ deleted: 1, success: true });
 });
 
 // Store Release atomic transaction
 app.post('/api/store-release', (req, res) => {
     const { itemId, qtyReleased, releaseData } = req.body;
-    db.serialize(() => {
-        db.run('BEGIN TRANSACTION');
-        db.get(`SELECT qty, unit FROM storeitems WHERE id = ?`, [itemId], (err, row) => {
-            if (err || !row || row.qty < qtyReleased) {
-                db.run('ROLLBACK');
-                return res.status(400).json({ error: "Insufficient stock or item not found." });
-            }
-            const newQty = row.qty - qtyReleased;
-            db.run(`UPDATE storeitems SET qty = ? WHERE id = ?`, [newQty, itemId], (err) => {
-                if (err) { db.run('ROLLBACK'); return res.status(500).json({ error: err.message }); }
-                
-                const keys = Object.keys(releaseData);
-                const values = Object.values(releaseData);
-                const placeholders = keys.map(() => '?').join(',');
-                db.run(`INSERT INTO storereleases (${keys.join(',')}) VALUES (${placeholders})`, values, function(err) {
-                    if (err) { db.run('ROLLBACK'); return res.status(500).json({ error: err.message }); }
-                    db.run('COMMIT');
-                    res.json({ success: true, remainingQty: newQty });
-                });
-            });
-        });
-    });
+    const data = readData();
+    
+    const item = data.storeitems.find(s => s.id == itemId);
+    if (!item || item.qty < qtyReleased) {
+        return res.status(400).json({ error: "Insufficient stock or item not found." });
+    }
+
+    item.qty -= qtyReleased;
+    const newRelease = { id: Date.now(), ...releaseData };
+    data.storereleases.unshift(newRelease);
+    writeData(data);
+
+    res.json({ success: true, remainingQty: item.qty });
 });
 
 // Fallback route for SPA
