@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bishoftu Site & Fleet Management System</title>
+    <!-- Suppress Tailwind Play CDN production console warning -->
+    <script>
+        const originalWarn = console.warn;
+        console.warn = function(...args) {
+            if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
+            originalWarn.apply(console, args);
+        };
+    </script>
     <!-- Tailwind CSS Play CDN for standalone execution -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -1005,7 +1013,6 @@
             if (!found && username === 'manager' && password === 'admin123') {
                 found = { username: 'manager', role: 'manager' };
             } else if (!found) {
-                // Check if user exists with any matching password
                 found = db.users.find(u => u.username === username && u.password === password);
             }
 
@@ -1059,7 +1066,6 @@
                 }
             });
 
-            // Hide/show create action buttons based on role
             const actionCols = document.querySelectorAll('.action-col');
             actionCols.forEach(col => {
                 col.style.display = (role === 'operator') ? 'none' : 'table-cell';
@@ -1142,7 +1148,6 @@
             const totalInc = filteredInc.reduce((s, x) => s + Number(x.amount || 0), 0);
             document.getElementById('kpi-income').innerText = 'ETB ' + totalInc.toLocaleString();
 
-            // Role specific widget & quick nav
             const role = db.currentUser.role;
             const titleEl = document.getElementById('dashRoleTitle');
             const badgeEl = document.getElementById('dashRoleBadge');
@@ -1187,7 +1192,6 @@
                 </div>`;
             }
 
-            // Quick Nav Cards
             navEl.innerHTML = `
                 <div onclick="switchTab('fuel')" class="bg-slate-50 hover:bg-amber-50 p-4 rounded-xl border border-slate-200 cursor-pointer transition text-center space-y-1">
                     <div class="text-2xl">⛽</div>
@@ -2040,7 +2044,6 @@
 
         // Modal Helpers
         function openModal(modalId) {
-            // Set default date/time fields if empty
             const dtInputs = document.querySelectorAll(`#${modalId} input[type="datetime-local"]`);
             dtInputs.forEach(input => {
                 if (!input.value) {
@@ -2052,10 +2055,8 @@
 
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
-            // Reset hidden edit IDs if present
             const hiddenId = document.querySelector(`#${modalId} input[type="hidden"]`);
             if (hiddenId) hiddenId.value = '';
-            // Reset titles
             const titleEl = document.querySelector(`#${modalId} h3`);
             if (titleEl && titleEl.innerText.includes('Edit')) {
                 titleEl.innerText = titleEl.innerText.replace('Edit', 'Add / New');
